@@ -29,7 +29,7 @@ export const VideoContainer = ({ url, main_url, setupPlayer, start, setupError, 
 	}
 
 	return (
-		<>
+		<div style={{width:'100%', aspectRatio: '16/9'}}>
 			<ReactPlayer
 				ref={playerRef}
 				url={url}
@@ -37,7 +37,7 @@ export const VideoContainer = ({ url, main_url, setupPlayer, start, setupError, 
 				playing={playing}
 				controls={true}
 				width='100%'
-				height='95%'
+				height='100%'
 				config={{
 					file: {
 					  // forceDASH: dash,
@@ -55,6 +55,6 @@ export const VideoContainer = ({ url, main_url, setupPlayer, start, setupError, 
 					err.message :
 					`Video is unplayable due to privacy settings, streaming permissions, etc.`)} // Error handling for invalid URLs
 			/>
-		</>
+		</div>
 	)
 };
