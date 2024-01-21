@@ -15,6 +15,12 @@ const ERRORS: { [key: string]: string } = {
 	"NO_ACTIVE_VIDEO": "\n> [!caution] Select Video\n> A video needs to be opened before using this hotkey.\n Highlight your video link and input your 'Open video player' hotkey to register a video.\n",
 }
 
+function getSeconds(ts: string) {
+	const timeArr = ts.split(":").map((v) => parseInt(v));
+	const [hh, mm, ss] = timeArr.length === 2 ? [0, ...timeArr] : timeArr;
+	return (hh || 0) * 3600 + (mm || 0) * 60 + (ss || 0);
+}
+
 export default class TimestampPlugin extends Plugin {
 	settings: TimestampPluginSettings;
 	player: ReactPlayer;
@@ -80,7 +86,7 @@ export default class TimestampPlugin extends Plugin {
 				if (isSameVideo(this.player, url)) {	
 					this.player?.seekTo(0);
 				  } else {
-					this.activateView(url, this.editor);
+					this.activateView(url, null, this.editor);
 				  }			
 				});
 			} else {
@@ -94,41 +100,70 @@ export default class TimestampPlugin extends Plugin {
 		// Markdown processor that turns video urls into buttons to open views of the video
 		this.registerMarkdownCodeBlockProcessor("video-note", (source, el, ctx) => {
 
-			const content = parseYaml(source.trim()) as {url: string, title?: string}
-			const url = content.url
+			const content = parseYaml(source.trim()) as {url?: string, title?: string, ts?: string}
 
-			if (isLocalFile(url) || ReactPlayer.canPlay(url) || isBiliUrl(url)) {
-				const root = el.createEl("div");
-				root.style.display = 'flex'
-				root.style.flexDirection = 'horizontal'
-				root.style.alignItems = 'center'
-				root.style.justifyContent = 'start'
-				root.style.width = 'fit-content'
-				root.style.gap = '6px'
-				root.style.padding = '6px 10px'
-				root.style.border = '1px solid lightgray'
-				root.style.borderRadius = '4px'
-				const icon = getIcon("video")
-				icon.style.flexShrink = '0'
-
-				root.appendChild(icon)
-
-				const title = root.createDiv()
-				title.innerText = content.title ?? content.url
-				title.style.width = 'auto'
-
-				root.addEventListener("click", () => {
-					if (isSameVideo(this.player, url)) {
-						this.player?.seekTo(0);
-					} else {
-						this.activateView(url, this.editor);
-					}
-				});
-			} else {
+			if (content.url && !(isLocalFile(content.url) || ReactPlayer.canPlay(content.url) || isBiliUrl(content.url))) {
 				if (this.editor) {
 					this.editor.replaceSelection(this.editor.getSelection() + "\n" + ERRORS["INVALID_URL"]);
 				}
+				return
 			}
+
+			const root = el.createEl("div");
+			root.style.display = 'flex'
+			root.style.flexDirection = 'horizontal'
+			root.style.alignItems = 'center'
+			root.style.justifyContent = 'start'
+			root.style.width = 'fit-content'
+			root.style.gap = '6px'
+			root.style.padding = '6px 10px'
+			root.style.border = '1px solid lightgray'
+			root.style.borderRadius = '4px'
+			const icon = getIcon("video")
+			icon.style.flexShrink = '0'
+
+			root.appendChild(icon)
+
+			let seconds: number | null = null
+			if (content.ts) {
+				const match = content.ts.match(/\d+:\d+:\d+|\d+:\d+/g)
+				if (match) {
+					seconds = getSeconds(match[0])
+				}
+			}
+
+			if (seconds !== null) {
+				const tsView = root.createEl('pre')
+				tsView.style.color = 'gray'
+				tsView.style.padding = '0px'
+				tsView.style.minHeight = '0px'
+				tsView.style.flexShrink = '0'
+				tsView.style.padding = '0px 2px'
+				tsView.style.backgroundColor = 'transparent'
+				tsView.style.color = 'gray'
+				tsView.innerText = content.ts
+			}
+
+			const title = content.title ?? content.url
+			if (title) {
+				const titleView = root.createDiv()
+				titleView.innerText = title
+				titleView.style.width = 'auto'
+			}
+
+			root.addEventListener("click", () => {
+				if (content.url) {
+					if (isSameVideo(this.player, content.url)) {
+						this.player?.seekTo(seconds ?? 0);
+					} else {
+						this.activateView(content.url, seconds, this.editor).then(()=> {
+							this.player?.seekTo(seconds ?? 0);
+						})
+					}
+				} else if (seconds !== null) {
+					this.player?.seekTo(seconds)
+				}
+			});
 		});
 
 		// Command that gets selected video link and sends it to view which passes it to React component
@@ -141,7 +176,7 @@ export default class TimestampPlugin extends Plugin {
 
 				// Activate the view with the valid link
 				if (isLocalFile(url) || ReactPlayer.canPlay(url) || isBiliUrl(url)) {
-					this.activateView(url, editor);
+					this.activateView(url, null, editor);
 					this.settings.noteTitle ?
 						editor.replaceSelection("\n" + this.settings.noteTitle + "\n" + "```timestamp-url \n " + url + "\n ```\n") :
 						editor.replaceSelection("```timestamp-url \n " + url + "\n ```\n")
@@ -224,7 +259,7 @@ export default class TimestampPlugin extends Plugin {
 				input.accept = "video/*, audio/*, .mpd, .flv";
 				input.onchange = (e: any) => {
 				  var url = e.target.files[0].path.trim();
-				  this.activateView(url, this.editor);
+				  this.activateView(url, null, this.editor);
 				  editor.replaceSelection("\n" + "```timestamp-url \n " + url + "\n ```\n");
 				};	  
 			  input.click();
@@ -306,7 +341,7 @@ export default class TimestampPlugin extends Plugin {
 	}
 
 	// This is called when a valid url is found => it activates the View which loads the React view
-	async activateView(url: string, editor: Editor) {
+	async activateView(url: string, seconds: number|null, editor: Editor) {
 		// this.app.workspace.detachLeavesOfType(VIDEO_VIEW);
 		if (this.app.workspace.getLeavesOfType(VIDEO_VIEW).length == 0) {
 			await this.app.workspace.getRightLeaf(false).setViewState({
@@ -319,56 +354,54 @@ export default class TimestampPlugin extends Plugin {
 		// );
 
 		// This triggers the React component to be loaded
-		this.app.workspace.getLeavesOfType(VIDEO_VIEW).forEach(async (leaf) => {
-			if (leaf.view instanceof VideoView) {
+		const videoLeaf = this.app.workspace.getLeavesOfType(VIDEO_VIEW).filter(leaf => leaf.view instanceof VideoView).first()
+		if (!videoLeaf) return
 
-				var localhost_url: string;
-				var subtitles: any[] = [];
+		let localhost_url: string;
+		let subtitles: any[] = [];
 
-				if (isLocalFile(url)) { 
-					localhost_url = localVideoRedirect(url); 
-					url = url.toString().replace(/^\"(.+)\"$/, "$1");
+		if (isLocalFile(url)) {
+			localhost_url = localVideoRedirect(url);
+			url = url.toString().replace(/^\"(.+)\"$/, "$1");
 
-				} else if (isBiliUrl(url)) {
-					var bili_info = await getBiliInfo(url);
-					localhost_url = bili_info.url;
-					subtitles = bili_info.subtitles;
-				}
-				else{
-					url = cleanUrl(url)
-				}
+		} else if (isBiliUrl(url)) {
+			let bili_info = await getBiliInfo(url);
+			localhost_url = bili_info.url;
+			subtitles = bili_info.subtitles;
+		}
+		else{
+			url = cleanUrl(url)
+		}
 
-				const setupPlayer = (player: ReactPlayer, setPlaying: React.Dispatch<React.SetStateAction<boolean>>) => {
-					this.player = player;
-					this.setPlaying = setPlaying;
-				}
+		const setupPlayer = (player: ReactPlayer, setPlaying: React.Dispatch<React.SetStateAction<boolean>>) => {
+			this.player = player;
+			this.setPlaying = setPlaying;
+		}
 
-				const setupError = (err: string) => {
-					editor.replaceSelection(editor.getSelection() + `\n> [!error] Streaming Error \n> ${err}\n`);
-				}
+		const setupError = (err: string) => {
+			editor.replaceSelection(editor.getSelection() + `\n> [!error] Streaming Error \n> ${err}\n`);
+		}
 
-				const saveTimeOnUnload = async () => {
-					if (this.player) {
-						this.settings.urlStartTimeMap.set(url, Number(this.player.getCurrentTime().toFixed(0)));
-					}
-					await this.saveSettings();
-				}
-				
-
-				// create a new video instance, sets up state/unload functionality, and passes in a start time if available else 0
-				leaf.setEphemeralState({
-					url: localhost_url || url,
-					main_url: localhost_url ? url : null,
-					setupPlayer,
-					setupError,
-					saveTimeOnUnload,
-					start: this.settings.startAtLastPosition ? ~~this.settings.urlStartTimeMap.get(url) : 0,
-					subtitles: subtitles,
-				});
-
-				await this.saveSettings();
+		const saveTimeOnUnload = async () => {
+			if (this.player) {
+				this.settings.urlStartTimeMap.set(url, Number(this.player.getCurrentTime().toFixed(0)));
 			}
+			await this.saveSettings();
+		}
+
+
+		// create a new video instance, sets up state/unload functionality, and passes in a start time if available else 0
+		videoLeaf.setEphemeralState({
+			url: localhost_url || url,
+			main_url: localhost_url ? url : null,
+			setupPlayer,
+			setupError,
+			saveTimeOnUnload,
+			start: seconds ?? (this.settings.startAtLastPosition ? ~~this.settings.urlStartTimeMap.get(url) : 0),
+			subtitles: subtitles,
 		});
+
+		await this.saveSettings();
 	}
 
 	async loadSettings() {
