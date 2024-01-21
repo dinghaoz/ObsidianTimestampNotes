@@ -100,7 +100,13 @@ export default class TimestampPlugin extends Plugin {
 		// Markdown processor that turns video urls into buttons to open views of the video
 		this.registerMarkdownCodeBlockProcessor("video-note", (source, el, ctx) => {
 
-			const content = parseYaml(source.trim()) as {url?: string, title?: string, ts?: string}
+			let content: {url?: string, title?: string, ts?: string}
+			try {
+				content = parseYaml(source.trim())
+			} catch (e) {
+				new Notice(`Wrong format ${e}`)
+				return;
+			}
 
 			if (content.url && !(isLocalFile(content.url) || ReactPlayer.canPlay(content.url) || isBiliUrl(content.url))) {
 				if (this.editor) {
@@ -119,6 +125,8 @@ export default class TimestampPlugin extends Plugin {
 			root.style.padding = '6px 10px'
 			root.style.border = '1px solid lightgray'
 			root.style.borderRadius = '4px'
+			root.style.cursor = "default"
+
 			const icon = getIcon("video")
 			icon.style.flexShrink = '0'
 
@@ -154,7 +162,7 @@ export default class TimestampPlugin extends Plugin {
 			root.addEventListener("click", () => {
 				if (content.url) {
 					if (isSameVideo(this.player, content.url)) {
-						this.player?.seekTo(seconds ?? 0);
+						this.player?.seekTo(seconds ?? 1);
 					} else {
 						this.activateView(content.url, seconds, this.editor).then(()=> {
 							this.player?.seekTo(seconds ?? 0);
@@ -177,9 +185,19 @@ export default class TimestampPlugin extends Plugin {
 				// Activate the view with the valid link
 				if (isLocalFile(url) || ReactPlayer.canPlay(url) || isBiliUrl(url)) {
 					this.activateView(url, null, editor);
-					this.settings.noteTitle ?
-						editor.replaceSelection("\n" + this.settings.noteTitle + "\n" + "```timestamp-url \n " + url + "\n ```\n") :
-						editor.replaceSelection("```timestamp-url \n " + url + "\n ```\n")
+					const noteTitle = this.settings.noteTitle
+					let content = ""
+					if (noteTitle) {
+						content += `${noteTitle}\n`
+					}
+
+					content += [
+						"```video-note",
+						`url: ${url}`,
+						"```"
+					].join('\n') + '\n'
+
+					editor.replaceSelection(content)
 					this.editor = editor;
 				} else {
 					editor.replaceSelection(ERRORS["INVALID_URL"])
@@ -198,6 +216,7 @@ export default class TimestampPlugin extends Plugin {
 					return
 				}
 
+
 				// convert current video time into timestamp
 				const leadingZero = (num: number) => num < 10 ? "0" + num.toFixed(0) : num.toFixed(0);
 				const totalSeconds = Number(this.player.getCurrentTime().toFixed(2));
@@ -206,8 +225,17 @@ export default class TimestampPlugin extends Plugin {
 				const seconds = totalSeconds - (hours * 3600) - (minutes * 60);
 				const time = (hours > 0 ? leadingZero(hours) + ":" : "") + leadingZero(minutes) + ":" + leadingZero(seconds);
 
+				let content = ""
+
+				content += [
+					"```video-note",
+					`ts: ${time}`,
+					`url: ${this.player.props.main_url ?? this.player.props.url}`,
+					"```"
+				].join('\n') + '\n'
+
 				// insert timestamp into editor
-				editor.replaceSelection("```timestamp \n " + time + "\n ```\n")
+				editor.replaceSelection(content)
 			}
 		});
 
