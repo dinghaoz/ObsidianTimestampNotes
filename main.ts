@@ -1,4 +1,4 @@
-import { Editor, MarkdownView, Plugin, Modal, App, Notice } from 'obsidian';
+import {Editor, MarkdownView, Plugin, Modal, App, Notice, parseYaml, getIcon} from 'obsidian';
 import ReactPlayer from 'react-player/lazy'
 
 import { VideoView, VIDEO_VIEW } from './view/VideoView';
@@ -82,6 +82,47 @@ export default class TimestampPlugin extends Plugin {
 				  } else {
 					this.activateView(url, this.editor);
 				  }			
+				});
+			} else {
+				if (this.editor) {
+					this.editor.replaceSelection(this.editor.getSelection() + "\n" + ERRORS["INVALID_URL"]);
+				}
+			}
+		});
+
+
+		// Markdown processor that turns video urls into buttons to open views of the video
+		this.registerMarkdownCodeBlockProcessor("video-note", (source, el, ctx) => {
+
+			const content = parseYaml(source.trim()) as {url: string, title?: string}
+			const url = content.url
+
+			if (isLocalFile(url) || ReactPlayer.canPlay(url) || isBiliUrl(url)) {
+				const root = el.createEl("div");
+				root.style.display = 'flex'
+				root.style.flexDirection = 'horizontal'
+				root.style.alignItems = 'center'
+				root.style.justifyContent = 'start'
+				root.style.width = 'fit-content'
+				root.style.gap = '6px'
+				root.style.padding = '6px 10px'
+				root.style.border = '1px solid lightgray'
+				root.style.borderRadius = '4px'
+				const icon = getIcon("video")
+				icon.style.flexShrink = '0'
+
+				root.appendChild(icon)
+
+				const title = root.createDiv()
+				title.innerText = content.title ?? content.url
+				title.style.width = 'auto'
+
+				root.addEventListener("click", () => {
+					if (isSameVideo(this.player, url)) {
+						this.player?.seekTo(0);
+					} else {
+						this.activateView(url, this.editor);
+					}
 				});
 			} else {
 				if (this.editor) {
