@@ -10,11 +10,11 @@ export interface VideoContainerProps {
 	start: number
 	setupPlayer: (player: ReactPlayer, setPlaying: React.Dispatch<React.SetStateAction<boolean>>) => void;
 	setupError: (err: string) => void;
+	onCapture: ()=>void
 	subtitles: any[];
-
 }
 
-export const VideoContainer = ({ url, main_url, setupPlayer, start, setupError, subtitles }: VideoContainerProps): JSX.Element => {
+export const VideoContainer = ({ url, main_url, setupPlayer, start, setupError, onCapture, subtitles }: VideoContainerProps): JSX.Element => {
 	// Reference to player passed back to the setupPlayer prop
 	const playerRef = useRef<ReactPlayer>();
 
@@ -55,6 +55,8 @@ export const VideoContainer = ({ url, main_url, setupPlayer, start, setupError, 
 					err.message :
 					`Video is unplayable due to privacy settings, streaming permissions, etc.`)} // Error handling for invalid URLs
 			/>
+
+			<button style={{marginTop:10}} onClick={(e)=>onCapture()}>Copy Snapshot</button>
 		</div>
 	)
 };
