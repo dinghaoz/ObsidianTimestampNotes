@@ -152,7 +152,11 @@ export default class TimestampPlugin extends Plugin {
 				tsView.innerText = content.ts
 			}
 
-			const title = content.title ?? content.url
+			let title = content.title
+			if (!content.ts) {
+				title = content.url
+			}
+
 			if (title) {
 				const titleView = root.createDiv()
 				titleView.innerText = title
