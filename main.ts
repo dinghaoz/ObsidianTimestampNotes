@@ -9,6 +9,9 @@ import { AddressInfo } from "node:net";
 import { server, startServer, PORT, localVideoRedirect, subtitleRedirect } from "handlers/server";
 import { isLocalFile, cleanUrl, isSameVideo } from "handlers/misc";
 import { getBiliInfo, isBiliUrl } from 'handlers/bilibili';
+import React, {ReactDOM} from "react";
+import {createRoot} from "react-dom/client";
+import {VideoButton, VideoButtonData} from "./view/VideoButton";
 
 const ERRORS: { [key: string]: string } = {
 	"INVALID_URL": "\n> [!error] Invalid Video URL\n> The highlighted link is not a valid video url. Please try again with a valid link.\n",
@@ -100,7 +103,7 @@ export default class TimestampPlugin extends Plugin {
 		// Markdown processor that turns video urls into buttons to open views of the video
 		this.registerMarkdownCodeBlockProcessor("video-note", (source, el, ctx) => {
 
-			let content: {url?: string, title?: string, ts?: string}
+			let content: VideoButtonData
 			try {
 				content = parseYaml(source.trim())
 			} catch (e) {
@@ -115,22 +118,6 @@ export default class TimestampPlugin extends Plugin {
 				return
 			}
 
-			const root = el.createEl("div");
-			root.style.display = 'flex'
-			root.style.flexDirection = 'horizontal'
-			root.style.alignItems = 'center'
-			root.style.justifyContent = 'start'
-			root.style.width = 'fit-content'
-			root.style.gap = '6px'
-			root.style.padding = '6px 10px'
-			root.style.border = '1px solid lightgray'
-			root.style.borderRadius = '4px'
-			root.style.cursor = "default"
-
-			const icon = getIcon("video")
-			icon.style.flexShrink = '0'
-
-			root.appendChild(icon)
 
 			let seconds: number | null = null
 			if (content.ts) {
@@ -140,42 +127,23 @@ export default class TimestampPlugin extends Plugin {
 				}
 			}
 
-			if (seconds !== null) {
-				const tsView = root.createEl('pre')
-				tsView.style.color = 'gray'
-				tsView.style.padding = '0px'
-				tsView.style.minHeight = '0px'
-				tsView.style.flexShrink = '0'
-				tsView.style.padding = '0px 2px'
-				tsView.style.backgroundColor = 'transparent'
-				tsView.style.color = 'gray'
-				tsView.innerText = content.ts
-			}
-
-			let title = content.title
-			if (!content.ts) {
-				title = content.url
-			}
-
-			if (title) {
-				const titleView = root.createDiv()
-				titleView.innerText = title
-				titleView.style.width = 'auto'
-			}
-
-			root.addEventListener("click", () => {
-				if (content.url) {
-					if (isSameVideo(this.player, content.url)) {
-						this.player?.seekTo(seconds ?? 1);
-					} else {
-						this.activateView(content.url, seconds, this.editor).then(()=> {
-							this.player?.seekTo(seconds ?? 0);
-						})
+			const root = createRoot(el);
+			root.render(React.createElement(VideoButton, {
+				data: content,
+				onClick: ()=> {
+					if (content.url) {
+						if (isSameVideo(this.player, content.url)) {
+							this.player?.seekTo(seconds ?? 1);
+						} else {
+							this.activateView(content.url, seconds, this.editor).then(()=> {
+								this.player?.seekTo(seconds ?? 0);
+							})
+						}
+					} else if (seconds !== null) {
+						this.player?.seekTo(seconds)
 					}
-				} else if (seconds !== null) {
-					this.player?.seekTo(seconds)
 				}
-			});
+			}, null))
 		});
 
 		// Command that gets selected video link and sends it to view which passes it to React component
