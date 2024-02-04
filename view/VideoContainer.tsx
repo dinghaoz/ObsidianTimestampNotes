@@ -55,8 +55,6 @@ export const VideoContainer = ({ url, main_url, setupPlayer, start, setupError, 
 					err.message :
 					`Video is unplayable due to privacy settings, streaming permissions, etc.`)} // Error handling for invalid URLs
 			/>
-
-			<button style={{marginTop:10}} onClick={(e)=>onCapture()}>Copy Snapshot</button>
 		</div>
 	)
 };

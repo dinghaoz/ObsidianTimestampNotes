@@ -4,10 +4,17 @@ import * as ReactDOM from "react-dom";
 import { createRoot, Root } from 'react-dom/client';
 
 import { VideoContainer, VideoContainerProps } from "./VideoContainer"
+import styled from "styled-components";
 
 export interface VideoViewProps extends VideoContainerProps {
 	saveTimeOnUnload: () => void;
+	focus?: boolean
 }
+
+const Container = styled.div`
+	display: flex;
+	flex-direction: column;
+`
 
 export const VIDEO_VIEW = "video-view";
 export class VideoView extends ItemView {
@@ -32,24 +39,30 @@ export class VideoView extends ItemView {
 		return "video";
 	}
 
-	setEphemeralState({ url, main_url, setupPlayer, setupError, onCapture, saveTimeOnUnload, start, subtitles }: VideoViewProps) {
+	setEphemeralState(props: VideoViewProps) {
+		console.log("setEphemeralState", props)
+		if (props.focus) {
+			return
+		}
 
 		// Allows view to save the playback time in the setting state when the view is closed 
-		this.saveTimeOnUnload = saveTimeOnUnload;
+		this.saveTimeOnUnload = props.saveTimeOnUnload;
 
 		// Create a root element for the view to render into
 		this.root.render(
-			<>
-				<VideoContainer
-					url={url}
-					main_url={main_url}
-					start={start}
-					setupPlayer={setupPlayer}
-					setupError={setupError}
-					onCapture={onCapture}
-					subtitles={subtitles}
-				/>
-			</>
+			<Container>
+				{(props.url || props.main_url) && <VideoContainer
+					url={props.url}
+					main_url={props.main_url}
+					start={props.start}
+					setupPlayer={props.setupPlayer}
+					setupError={props.setupError}
+					onCapture={props.onCapture}
+					subtitles={props.subtitles}
+				/>}
+
+				<button style={{marginTop:10}} onClick={(e)=>props.onCapture()}>Copy Snapshot</button>
+			</Container>
 		);
 	}
 

@@ -156,7 +156,7 @@ export default class TimestampPlugin extends Plugin {
 
 				// Activate the view with the valid link
 				if (isLocalFile(url) || ReactPlayer.canPlay(url) || isBiliUrl(url)) {
-					this.activateView(url, null, editor);
+					this.activateView(url, null, editor).catch();
 					const noteTitle = this.settings.noteTitle
 					let content = ""
 					if (noteTitle) {
@@ -428,35 +428,3 @@ export default class TimestampPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 }
-
-// class SampleModal extends Modal {
-// 	editor: Editor;
-// 	activateView: (url: string, editor: Editor) => void;
-// 	constructor(app: App, activateView: (url: string, editor: Editor) => void, editor: Editor) {
-// 		super(app);
-// 		this.activateView = activateView;
-// 		this.editor = editor;
-// 	}
-
-// 	onOpen() {
-// 		const { contentEl } = this;
-// 		// add an input field to contentEl
-
-// 		const input = contentEl.createEl('input');
-// 		input.setAttribute("type", "file");
-// 		input.onchange = (e: any) => {
-// 			// accept local video input and make a url from input
-// 			const url = URL.createObjectURL(e.target.files[0]);
-// 			this.activateView(url, this.editor);
-
-// 			// Can't get the buttons to work with local videos unfortunately
-// 			// this.editor.replaceSelection("\n" + "```timestamp-url \n " + url.trim() + "\n ```\n")
-// 			this.close();
-// 		}
-// 	}
-
-// 	onClose() {
-// 		const { contentEl } = this;
-// 		contentEl.empty();
-// 	}
-// }
