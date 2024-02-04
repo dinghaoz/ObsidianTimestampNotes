@@ -361,21 +361,6 @@ export default class TimestampPlugin extends Plugin {
 		const videoLeaf = this.app.workspace.getLeavesOfType(VIDEO_VIEW).filter(leaf => leaf.view instanceof VideoView).first()
 		if (!videoLeaf) return
 
-		let localhost_url: string;
-		let subtitles: any[] = [];
-
-		if (isLocalFile(url)) {
-			localhost_url = localVideoRedirect(url);
-			url = url.toString().replace(/^\"(.+)\"$/, "$1");
-
-		} else if (isBiliUrl(url)) {
-			let bili_info = await getBiliInfo(url);
-			localhost_url = bili_info.url;
-			subtitles = bili_info.subtitles;
-		}
-		else{
-			url = cleanUrl(url)
-		}
 
 		const setupPlayer = (player: ReactPlayer, setPlaying: React.Dispatch<React.SetStateAction<boolean>>) => {
 			this.player = player;
@@ -400,14 +385,14 @@ export default class TimestampPlugin extends Plugin {
 
 		// create a new video instance, sets up state/unload functionality, and passes in a start time if available else 0
 		videoLeaf.setEphemeralState({
-			url: localhost_url || url,
-			main_url: localhost_url ? url : null,
+			spec: {
+				url: url,
+				start: seconds ?? (this.settings.startAtLastPosition ? ~~this.settings.urlStartTimeMap.get(url) : 0)
+			},
+			clickTime: new Date().getTime(),
 			setupPlayer,
 			setupError,
 			onCapture,
-			saveTimeOnUnload,
-			start: seconds ?? (this.settings.startAtLastPosition ? ~~this.settings.urlStartTimeMap.get(url) : 0),
-			subtitles: subtitles,
 		});
 
 		await this.saveSettings();

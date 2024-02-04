@@ -1,6 +1,7 @@
-import React, {useEffect, useMemo, useRef} from "react";
+import React from "react";
 import styled from "styled-components";
 import {getIcon} from "obsidian";
+import {IconView} from "./IconView";
 
 export type VideoButtonData = {
   url?: string,
@@ -19,6 +20,9 @@ const Container = styled.div`
   border: 1px solid lightgray;
   border-radius: 4px;
   cursor: default;
+  &:hover {
+    background-color: lightgray;
+  }
 `
 
 const Time = styled.div`
@@ -40,18 +44,10 @@ export function VideoButton(props: {data: VideoButtonData, onClick: ()=>void}) {
     title = props.data.url
   }
 
-  function addIconIfNeeded(e: HTMLDivElement|null) {
-    if (e) {
-      if (!(e.firstChild instanceof SVGSVGElement)) {
-        const icon = getIcon("video")
-        icon.style.flexShrink = '0'
-        e.insertBefore(icon, e.firstChild)
-      }
-    }
-  }
 
   return (
-    <Container onClick={props.onClick} ref={addIconIfNeeded}>
+    <Container onClick={props.onClick}>
+      <IconView name={"video"}/>
       {props.data.ts && <Time>{props.data.ts}</Time>}
       {title && <Title>{title}</Title>}
     </Container>
