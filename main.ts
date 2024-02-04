@@ -25,17 +25,21 @@ function getSeconds(ts: string) {
 }
 
 export default class TimestampPlugin extends Plugin {
+
 	settings: TimestampPluginSettings;
 	player: ReactPlayer;
 	setPlaying: React.Dispatch<React.SetStateAction<boolean>>;
-	editor: Editor;
+
 	server: http.Server;
 
 	async onload() {
 		// Register view
 		this.registerView(
 			VIDEO_VIEW,
-			(leaf) => new VideoView(leaf)
+			(leaf) => new VideoView(leaf, (player, setPlaying) => {
+				this.player = player
+				this.setPlaying = setPlaying
+			})
 		);
 
 		// Register settings
@@ -84,18 +88,16 @@ export default class TimestampPlugin extends Plugin {
 			button.style.color = this.settings.urlTextColor;
 			if (isLocalFile(url) || ReactPlayer.canPlay(url) || isBiliUrl(url)) {
 			button.style.backgroundColor = this.settings.urlColor;
-			
+
 			button.addEventListener("click", () => {
 				if (isSameVideo(this.player, url)) {	
 					this.player?.seekTo(0);
 				  } else {
-					this.activateView(url, null, this.editor);
+					this.activateView(url, null);
 				  }			
 				});
 			} else {
-				if (this.editor) {
-					this.editor.replaceSelection(this.editor.getSelection() + "\n" + ERRORS["INVALID_URL"]);
-				}
+				new Notice(ERRORS["INVALID_URL"]);
 			}
 		});
 
@@ -112,9 +114,8 @@ export default class TimestampPlugin extends Plugin {
 			}
 
 			if (content.url && !(isLocalFile(content.url) || ReactPlayer.canPlay(content.url) || isBiliUrl(content.url))) {
-				if (this.editor) {
-					this.editor.replaceSelection(this.editor.getSelection() + "\n" + ERRORS["INVALID_URL"]);
-				}
+				new Notice(ERRORS["INVALID_URL"]);
+
 				return
 			}
 
@@ -135,7 +136,7 @@ export default class TimestampPlugin extends Plugin {
 						if (isSameVideo(this.player, content.url)) {
 							this.player?.seekTo(seconds ?? 1);
 						} else {
-							this.activateView(content.url, seconds, this.editor).then(()=> {
+							this.activateView(content.url, seconds).then(()=> {
 								this.player?.seekTo(seconds ?? 0);
 							})
 						}
@@ -156,7 +157,7 @@ export default class TimestampPlugin extends Plugin {
 
 				// Activate the view with the valid link
 				if (isLocalFile(url) || ReactPlayer.canPlay(url) || isBiliUrl(url)) {
-					this.activateView(url, null, editor).catch();
+					this.activateView(url, null).catch();
 					const noteTitle = this.settings.noteTitle
 					let content = ""
 					if (noteTitle) {
@@ -170,7 +171,6 @@ export default class TimestampPlugin extends Plugin {
 					].join('\n') + '\n'
 
 					editor.replaceSelection(content)
-					this.editor = editor;
 				} else {
 					editor.replaceSelection(ERRORS["INVALID_URL"])
 				}
@@ -238,17 +238,6 @@ export default class TimestampPlugin extends Plugin {
 			}
 		});
 
-		// // This adds a complex command that can check whether the current state of the app allows execution of the command
-		// this.addCommand({
-		// 	id: 'open-sample-modal-complex',
-		// 	name: 'Open sample modal (complex)',
-		// 	editorCallback: (editor: Editor, view: MarkdownView) => {
-		// 		this.editor = editor;
-		// 		new SampleModal(this.app, this.activateView.bind(this), editor).open();
-		// 		// This command will only show up in Command Palette when the check function returns true
-		// 		return true;
-		// 	}
-		// });
 
 		this.addCommand({
 			id: "add-local-media",
@@ -259,7 +248,7 @@ export default class TimestampPlugin extends Plugin {
 				input.accept = "video/*, audio/*, .mpd, .flv";
 				input.onchange = (e: any) => {
 				  var url = e.target.files[0].path.trim();
-				  this.activateView(url, null, this.editor);
+				  this.activateView(url, null);
 				  editor.replaceSelection("\n" + "```timestamp-url \n " + url + "\n ```\n");
 				};	  
 			  input.click();
@@ -338,14 +327,13 @@ export default class TimestampPlugin extends Plugin {
 
 	async onunload() {
 		this.player = null;
-		this.editor = null;
 		this.setPlaying = null;
 		this.app.workspace.detachLeavesOfType(VIDEO_VIEW);
 		this.server.close();
 	}
 
 	// This is called when a valid url is found => it activates the View which loads the React view
-	async activateView(url: string, seconds: number|null, editor: Editor) {
+	async activateView(url: string, seconds: number|null) {
 		// this.app.workspace.detachLeavesOfType(VIDEO_VIEW);
 		if (this.app.workspace.getLeavesOfType(VIDEO_VIEW).length == 0) {
 			await this.app.workspace.getRightLeaf(false).setViewState({
@@ -362,37 +350,31 @@ export default class TimestampPlugin extends Plugin {
 		if (!videoLeaf) return
 
 
-		const setupPlayer = (player: ReactPlayer, setPlaying: React.Dispatch<React.SetStateAction<boolean>>) => {
-			this.player = player;
-			this.setPlaying = setPlaying;
-		}
-
-		const setupError = (err: string) => {
-			editor.replaceSelection(editor.getSelection() + `\n> [!error] Streaming Error \n> ${err}\n`);
-		}
-
-		const onCapture = () => {
-			this.copySnapshot().catch()
-		}
-
-		const saveTimeOnUnload = async () => {
-			if (this.player) {
-				this.settings.urlStartTimeMap.set(url, Number(this.player.getCurrentTime().toFixed(0)));
-			}
-			await this.saveSettings();
-		}
+		// const setupPlayer = (player: ReactPlayer, setPlaying: React.Dispatch<React.SetStateAction<boolean>>) => {
+		// 	this.player = player;
+		// 	this.setPlaying = setPlaying;
+		// }
+		//
+		// const setupError = (err: string) => {
+		// 	editor.replaceSelection(editor.getSelection() + `\n> [!error] Streaming Error \n> ${err}\n`);
+		// }
+		//
+		// const onCapture = () => {
+		// 	this.copySnapshot().catch()
+		// }
+		//
+		// const saveTimeOnUnload = async () => {
+		// 	if (this.player) {
+		// 		this.settings.urlStartTimeMap.set(url, Number(this.player.getCurrentTime().toFixed(0)));
+		// 	}
+		// 	await this.saveSettings();
+		// }
 
 
 		// create a new video instance, sets up state/unload functionality, and passes in a start time if available else 0
 		videoLeaf.setEphemeralState({
-			spec: {
-				url: url,
-				start: seconds ?? (this.settings.startAtLastPosition ? ~~this.settings.urlStartTimeMap.get(url) : 0)
-			},
-			clickTime: new Date().getTime(),
-			setupPlayer,
-			setupError,
-			onCapture,
+			url: url,
+			start: seconds ?? (this.settings.startAtLastPosition ? ~~this.settings.urlStartTimeMap.get(url) : 0)
 		});
 
 		await this.saveSettings();

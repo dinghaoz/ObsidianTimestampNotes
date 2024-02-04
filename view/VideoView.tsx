@@ -3,23 +3,32 @@ import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { createRoot, Root } from 'react-dom/client';
 
-import {VideoPanel, VideoPanelProps} from "./VideoPanel";
+import {VideoPanel, VideoPanelProps, VideoPlaySpec} from "./VideoPanel";
+import ReactPlayer from "react-player/lazy";
 
-export type VideoViewEphemeralState = VideoPanelProps | {focus?: boolean}
+export type VideoViewEphemeralState = VideoPlaySpec | {focus?: boolean}
 
-export const isVideoPanelProps = (value: any): value is VideoPanelProps => {
-	return value.spec !== undefined
+export const isVideoPlaySpec = (value: any): value is VideoPlaySpec => {
+	return !!value.url
 }
 
 export const VIDEO_VIEW = "video-view";
 
 export class VideoView extends ItemView {
 	root: Root
-	constructor(leaf: WorkspaceLeaf) {
+	constructor(
+		leaf: WorkspaceLeaf,
+		readonly onPlayerReady: (player: ReactPlayer, setPlaying: React.Dispatch<React.SetStateAction<boolean>>) => void
+	) {
+
 		super(leaf);
 		this.root = createRoot(this.containerEl.children[1])
 
-		// this.root.render(React.createElement(VideoPanel, {spec: null, }, null))
+		this.root.render(React.createElement(VideoPanel, {
+			spec: null,
+			onPlayerReady: this.onPlayerReady,
+			clickTime: new Date().getTime()
+		}, null))
 	}
 
 	getViewType() {
@@ -34,14 +43,19 @@ export class VideoView extends ItemView {
 		return "video";
 	}
 
-	setEphemeralState(props: VideoViewEphemeralState) {
-		console.log("setEphemeralState", props)
-		if (!isVideoPanelProps(props)) {
+	setEphemeralState(state: VideoViewEphemeralState) {
+		console.log("setEphemeralState", state)
+		if (!isVideoPlaySpec(state)) {
+			console.log("setEphemeralState failed", state)
 			return
 		}
 
 		// Create a root element for the view to render into
-		this.root.render(React.createElement(VideoPanel, props, null))
+		this.root.render(React.createElement(VideoPanel, {
+			spec: state,
+			onPlayerReady: this.onPlayerReady,
+			clickTime: new Date().getTime()
+		}, null))
 	}
 
 	async onClose() {

@@ -38,9 +38,7 @@ export type VideoPlaySpec = {
 export type VideoPanelProps = {
   spec: VideoPlaySpec|null
   clickTime: number,
-  setupPlayer: (player: ReactPlayer, setPlaying: React.Dispatch<React.SetStateAction<boolean>>) => void;
-  setupError: (err: string) => void;
-  onCapture: ()=>void
+  onPlayerReady: (player: ReactPlayer, setPlaying: React.Dispatch<React.SetStateAction<boolean>>) => void;
 }
 
 export const HStack = styled.div`
@@ -103,7 +101,7 @@ export function VideoPanel(props: VideoPanelProps) {
     if (props.spec && playerRef.current.getCurrentTime() <= 0) playerRef.current.seekTo(props.spec.start);
 
     // Sets up video player to be accessed in main.ts
-    if (playerRef) props.setupPlayer(playerRef.current, setPlaying);
+    if (playerRef) props.onPlayerReady(playerRef.current, setPlaying);
   }
 
 
@@ -116,6 +114,10 @@ export function VideoPanel(props: VideoPanelProps) {
       })
     }
   }, [props.clickTime]);
+
+  function onCapture() {
+
+  }
 
 
   return (<Container>
@@ -155,12 +157,15 @@ export function VideoPanel(props: VideoPanelProps) {
                 },
               }}
               onReady={onReady}
-              onError={(err) => props.setupError(err ?
-                err.message :
-                `Video is unplayable due to privacy settings, streaming permissions, etc.`)} // Error handling for invalid URLs
+              onError={(err) => {
+                const errMsg = err ?
+                  err.message :
+                  `Video is unplayable due to privacy settings, streaming permissions, etc.`
+                console.error(errMsg)
+              }} // Error handling for invalid URLs
             />
           </div>
-          <Button style={{marginTop:10}} onClick={()=>props.onCapture()}>Copy Snapshot</Button>
+          <Button style={{marginTop:10}} onClick={onCapture}>Copy Snapshot</Button>
         </>
       }
 
