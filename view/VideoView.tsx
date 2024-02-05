@@ -1,10 +1,11 @@
-import { ItemView, WorkspaceLeaf } from 'obsidian';
+import {ItemView, Menu, WorkspaceLeaf} from 'obsidian';
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { createRoot, Root } from 'react-dom/client';
 
 import {PlayItem, VideoPanel, VideoPanelProps, VideoPanelStatesAccessor, VideoPlaySpec} from "./VideoPanel";
 import ReactPlayer from "react-player/lazy";
+import {subtitleRedirect} from "../handlers/server";
 
 
 export const VIDEO_VIEW = "video-view";
@@ -67,17 +68,8 @@ export class VideoView extends ItemView {
 					this.pendingSeekTime = undefined
 				}
 			},
-			onChooseFile: () => {
-				const input = document.createElement("input");
-				input.setAttribute("type", "file");
-				input.accept = "video/*, audio/*, .mpd, .flv";
-				input.onchange = (e: any) => {
-					const url = e.target.files[0].path.trim();
-					if (this.statesAccessor) {
-						this.statesAccessor.setRawUrl(url)
-					}
-				};
-				input.click();
+			onMoreOptions: (event: React.MouseEvent<HTMLDivElement>) => {
+				this.showMoreOptionsMenu(event)
 			},
 			onCommitUrl: url => {
 				if (this.statesAccessor) {
@@ -85,6 +77,70 @@ export class VideoView extends ItemView {
 				}
 			}
 		}, null))
+	}
+
+	showMoreOptionsMenu(event: React.MouseEvent<HTMLDivElement>) {
+		if (!this.statesAccessor)
+			return
+
+		const menu = new Menu();
+
+		menu.addItem(item => item
+				.setTitle("Open Local File...")
+				.onClick(()=>this.chooseLocalFile())
+		);
+
+		const playItem = this.statesAccessor.getPlayItem()
+		if (playItem) {
+			if (this.player) {
+				menu.addItem(item => item
+					.setTitle("Add Subtitles...")
+					.onClick(()=>this.chooseSubtitles())
+				);
+			}
+
+			menu.addItem(item => item
+				.setTitle("Close")
+				.onClick(()=>this.statesAccessor?.setRawUrl(null))
+			);
+		}
+
+		menu.showAtMouseEvent(event.nativeEvent);
+	}
+
+	chooseLocalFile() {
+		const input = document.createElement("input");
+		input.setAttribute("type", "file");
+		input.accept = "video/*, audio/*, .mpd, .flv";
+		input.onchange = (e: any) => {
+			const url = e.target.files[0].path.trim();
+			if (this.statesAccessor) {
+				this.statesAccessor.setRawUrl(url)
+			}
+		};
+		input.click();
+	}
+
+	chooseSubtitles() {
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = ".srt,.vtt";
+		input.onchange = (e: any) => {
+			if (!this.player) return
+
+			const files = e.target.files;
+			for (let i = 0; i < files.length; i++) {
+				const file = files[i];
+				const track = document.createElement("track");
+				track.kind = "subtitles";
+				track.label = file.name;
+				track.src = subtitleRedirect(file.path);
+				// track.mode = i == files.length - 1 ? "showing" : "hidden";
+				this.player.getInternalPlayer().appendChild(track);
+			}
+		};
+
+		input.click();
 	}
 
 	getViewType() {

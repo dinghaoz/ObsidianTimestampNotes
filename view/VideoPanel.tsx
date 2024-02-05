@@ -57,7 +57,7 @@ export type VideoPanelStatesAccessor = {
 export type VideoPanelProps = {
   onExportStateAccess: (statesAccessor: VideoPanelStatesAccessor)=>void,
   onPlayerReady: (player: ReactPlayer)=>void,
-  onChooseFile: ()=>void,
+  onMoreOptions: (event: React.MouseEvent<HTMLDivElement>)=>void,
   onCommitUrl: (url: string)=>void,
 }
 
@@ -143,8 +143,8 @@ export function VideoPanel(props: VideoPanelProps) {
             props.onCommitUrl(editingUrl)
           }
         }}/>
-        <div className={"clickable-icon"} onClick={props.onChooseFile}>
-          <IconView name={"folder"}/>
+        <div className={"clickable-icon"} onClick={props.onMoreOptions}>
+          <IconView name={"more-horizontal"}/>
         </div>
 
         {playItem && <div className={"clickable-icon"} onClick={()=>setRawUrl(null)}>
