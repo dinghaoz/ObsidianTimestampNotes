@@ -56,9 +56,7 @@ export type VideoPanelStatesAccessor = {
 
 export type VideoPanelProps = {
   onExportStateAccess: (statesAccessor: VideoPanelStatesAccessor)=>void,
-  onPlayerReady: (player: ReactPlayer)=>void,
-  onChooseFile: ()=>void,
-  onCommitUrl: (url: string)=>void,
+  onPlayerReady: (player: ReactPlayer)=>void
 }
 
 export const HStack = styled.div`
@@ -122,9 +120,9 @@ export function VideoPanel(props: VideoPanelProps) {
 
   useEffect(() => {
     if (rawUrl) {
-      getPlayItem(rawUrl).then(playItem => {
-        setEditingUrl(playItem?.displayUrl ?? "")
-        setPlayItem(playItem)
+      getPlayItem(rawUrl).then(r => {
+        setEditingUrl(r?.displayUrl ?? "")
+        setPlayItem(r)
       })
     } else {
       setPlayItem(null)
@@ -135,15 +133,29 @@ export function VideoPanel(props: VideoPanelProps) {
 
   }
 
+
+  function onChooseFile() {
+    const input = document.createElement("input");
+    input.setAttribute("type", "file");
+    input.accept = "video/*, audio/*, .mpd, .flv";
+    input.onchange = (e: any) => {
+      const url = e.target.files[0].path.trim();
+      if (url) {
+        setRawUrl(url)
+      }
+    };
+    input.click();
+  }
+
   return (<Container>
       <HStack style={{gap: 6}}>
         <input type={"text"} style={{flexGrow: 1}}  value={editingUrl} onChange={e=>{setEditingUrl(e.currentTarget.value)}} onKeyUp={event => {
           if (event.key === "Enter") {
             event.preventDefault();
-            props.onCommitUrl(editingUrl)
+            setRawUrl(event.currentTarget.value)
           }
         }}/>
-        <div className={"clickable-icon"} onClick={props.onChooseFile}>
+        <div className={"clickable-icon"} onClick={onChooseFile}>
           <IconView name={"folder"}/>
         </div>
 

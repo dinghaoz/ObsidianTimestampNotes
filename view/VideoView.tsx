@@ -66,23 +66,6 @@ export class VideoView extends ItemView {
 					player.seekTo(this.pendingSeekTime)
 					this.pendingSeekTime = undefined
 				}
-			},
-			onChooseFile: () => {
-				const input = document.createElement("input");
-				input.setAttribute("type", "file");
-				input.accept = "video/*, audio/*, .mpd, .flv";
-				input.onchange = (e: any) => {
-					const url = e.target.files[0].path.trim();
-					if (this.statesAccessor) {
-						this.statesAccessor.setRawUrl(url)
-					}
-				};
-				input.click();
-			},
-			onCommitUrl: url => {
-				if (this.statesAccessor) {
-					this.statesAccessor.setRawUrl(url)
-				}
 			}
 		}, null))
 	}
