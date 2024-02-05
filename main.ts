@@ -1,7 +1,14 @@
 import {Editor, MarkdownView, Plugin, Modal, App, Notice, parseYaml, getIcon} from 'obsidian';
 import ReactPlayer from 'react-player/lazy'
 
-import { VideoView, VIDEO_VIEW } from './view/VideoView';
+import {
+	VideoView,
+	VIDEO_VIEW,
+	VideoPanelPlay,
+	VideoPanelSeekTo,
+	VideoPanelGetStamp,
+	VideoPanelToggle, VideoPanelSeek
+} from './view/VideoView';
 import { TimestampPluginSettings, TimestampPluginSettingTab, DEFAULT_SETTINGS } from 'settings';
 
 import * as http from "http";
@@ -26,20 +33,14 @@ function getSeconds(ts: string) {
 
 export default class TimestampPlugin extends Plugin {
 
-	settings: TimestampPluginSettings;
-	player: ReactPlayer;
-	setPlaying: React.Dispatch<React.SetStateAction<boolean>>;
-
-	server: http.Server;
+	settings!: TimestampPluginSettings;
+	server!: http.Server;
 
 	async onload() {
 		// Register view
 		this.registerView(
 			VIDEO_VIEW,
-			(leaf) => new VideoView(leaf, (player, setPlaying) => {
-				this.player = player
-				this.setPlaying = setPlaying
-			})
+			(leaf) => new VideoView(leaf)
 		);
 
 		// Register settings
@@ -48,59 +49,6 @@ export default class TimestampPlugin extends Plugin {
 		// Start local server
 		if (!server) await startServer(this.settings.port);
 		this.server = server;
-
-		// Markdown processor that turns timestamps into buttons
-		this.registerMarkdownCodeBlockProcessor("timestamp", (source, el, ctx) => {
-			// Match mm:ss or hh:mm:ss timestamp format
-			const regExp = /\d+:\d+:\d+|\d+:\d+/g;
-			const rows = source.split("\n").filter((row) => row.length > 0);
-			rows.forEach((row) => {
-				const match = row.match(regExp);
-				if (match) {
-					//create button for each timestamp
-					const div = el.createEl("div");
-					const button = div.createEl("button");
-					button.innerText = match[0];
-					button.style.backgroundColor = this.settings.timestampColor;
-					button.style.color = this.settings.timestampTextColor;
-
-					// convert timestamp to seconds and seek to that position when clicked
-					button.addEventListener("click", () => {
-						const timeArr = match[0].split(":").map((v) => parseInt(v));
-						const [hh, mm, ss] = timeArr.length === 2 ? [0, ...timeArr] : timeArr;
-						const seconds = (hh || 0) * 3600 + (mm || 0) * 60 + (ss || 0);
-						if (this.player) this.player.seekTo(seconds);
-					});
-					div.appendChild(button);
-				}
-			})
-		});
-
-
-		// Markdown processor that turns video urls into buttons to open views of the video
-		this.registerMarkdownCodeBlockProcessor("timestamp-url", (source, el, ctx) => {
-			const url = source.trim();
-			// Creates button for video url
-			const div = el.createEl("div");
-			const button = div.createEl("button");
-			button.innerText = url;
-			button.style.backgroundColor = "GRAY";
-			button.style.color = this.settings.urlTextColor;
-			if (isLocalFile(url) || ReactPlayer.canPlay(url) || isBiliUrl(url)) {
-			button.style.backgroundColor = this.settings.urlColor;
-
-			button.addEventListener("click", () => {
-				if (isSameVideo(this.player, url)) {	
-					this.player?.seekTo(0);
-				  } else {
-					this.activateView(url, null);
-				  }			
-				});
-			} else {
-				new Notice(ERRORS["INVALID_URL"]);
-			}
-		});
-
 
 		// Markdown processor that turns video urls into buttons to open views of the video
 		this.registerMarkdownCodeBlockProcessor("video-note", (source, el, ctx) => {
@@ -120,7 +68,7 @@ export default class TimestampPlugin extends Plugin {
 			}
 
 
-			let seconds: number | null = null
+			let seconds: number
 			if (content.ts) {
 				const match = content.ts.match(/\d+:\d+:\d+|\d+:\d+/g)
 				if (match) {
@@ -132,17 +80,7 @@ export default class TimestampPlugin extends Plugin {
 			root.render(React.createElement(VideoButton, {
 				data: content,
 				onClick: ()=> {
-					if (content.url) {
-						if (isSameVideo(this.player, content.url)) {
-							this.player?.seekTo(seconds ?? 1);
-						} else {
-							this.activateView(content.url, seconds).then(()=> {
-								this.player?.seekTo(seconds ?? 0);
-							})
-						}
-					} else if (seconds !== null) {
-						this.player?.seekTo(seconds)
-					}
+					this.play(content.url, seconds)
 				}
 			}, null))
 		});
@@ -151,13 +89,13 @@ export default class TimestampPlugin extends Plugin {
 		this.addCommand({
 			id: 'trigger-player',
 			name: 'Open video player (copy video url and use hotkey)',
-			editorCallback: async (editor: Editor, view: MarkdownView) => {
+			editorCallback: async (editor, view) => {
 				// Get selected text or clipboard content and match against video url to convert link to video video id
 				const url = editor.getSelection().trim() || (await navigator.clipboard.readText()).trim();
 
 				// Activate the view with the valid link
 				if (isLocalFile(url) || ReactPlayer.canPlay(url) || isBiliUrl(url)) {
-					this.activateView(url, null).catch();
+					this.play(url, 0).catch();
 					const noteTitle = this.settings.noteTitle
 					let content = ""
 					if (noteTitle) {
@@ -182,32 +120,32 @@ export default class TimestampPlugin extends Plugin {
 		this.addCommand({
 			id: 'timestamp-insert',
 			name: 'Insert timestamp based on videos current play time',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				if (!this.player) {
-					editor.replaceSelection(ERRORS["NO_ACTIVE_VIDEO"])
-					return
-				}
+			editorCallback: (editor, view) => {
+				const videoLeaf = this.getVideoLeaf()
+				if (!videoLeaf) return;
 
+				VideoPanelGetStamp(videoLeaf, (rawUrl, playItem, playTime)=> {
+					if (playItem && playTime) {
+						const leadingZero = (num: number) => num < 10 ? "0" + num.toFixed(0) : num.toFixed(0);
+						const totalSeconds = Number(playTime.toFixed(2));
+						const hours = Math.floor(totalSeconds / 3600);
+						const minutes = Math.floor((totalSeconds - (hours * 3600)) / 60);
+						const seconds = totalSeconds - (hours * 3600) - (minutes * 60);
+						const time = (hours > 0 ? leadingZero(hours) + ":" : "") + leadingZero(minutes) + ":" + leadingZero(seconds);
 
-				// convert current video time into timestamp
-				const leadingZero = (num: number) => num < 10 ? "0" + num.toFixed(0) : num.toFixed(0);
-				const totalSeconds = Number(this.player.getCurrentTime().toFixed(2));
-				const hours = Math.floor(totalSeconds / 3600);
-				const minutes = Math.floor((totalSeconds - (hours * 3600)) / 60);
-				const seconds = totalSeconds - (hours * 3600) - (minutes * 60);
-				const time = (hours > 0 ? leadingZero(hours) + ":" : "") + leadingZero(minutes) + ":" + leadingZero(seconds);
+						let content = ""
 
-				let content = ""
+						content += [
+							"```video-note",
+							`ts: ${time}`,
+							`url: ${playItem.displayUrl}`,
+							"```"
+						].join('\n') + '\n'
 
-				content += [
-					"```video-note",
-					`ts: ${time}`,
-					`url: ${this.player.props.main_url ?? this.player.props.url}`,
-					"```"
-				].join('\n') + '\n'
-
-				// insert timestamp into editor
-				editor.replaceSelection(content)
+						// insert timestamp into editor
+						editor.replaceSelection(content)
+					}
+				})
 			}
 		});
 
@@ -216,7 +154,10 @@ export default class TimestampPlugin extends Plugin {
 			id: 'pause-player',
 			name: 'Pause player',
 			callback: () => {
-				this.setPlaying(!this.player.props.playing)
+				const videoLeaf = this.getVideoLeaf()
+				if (!videoLeaf) return;
+
+				VideoPanelToggle(videoLeaf)
 			}
 		});
 
@@ -225,7 +166,11 @@ export default class TimestampPlugin extends Plugin {
 			id: 'seek-forward',
 			name: 'Seek Forward',
 			callback: () => {
-				if (this.player) this.player.seekTo(this.player.getCurrentTime() + parseInt(this.settings.forwardSeek));
+
+				const videoLeaf = this.getVideoLeaf()
+				if (!videoLeaf) return;
+
+				VideoPanelSeek(videoLeaf, parseInt(this.settings.forwardSeek))
 			}
 		});
 
@@ -234,106 +179,111 @@ export default class TimestampPlugin extends Plugin {
 			id: 'seek-backward',
 			name: 'Seek Backward',
 			callback: () => {
-				if (this.player) this.player.seekTo(this.player.getCurrentTime() - parseInt(this.settings.backwardsSeek));
+				const videoLeaf = this.getVideoLeaf()
+				if (!videoLeaf) return;
+
+				VideoPanelSeek(videoLeaf, -parseInt(this.settings.forwardSeek))
 			}
 		});
 
 
-		this.addCommand({
-			id: "add-local-media",
-			name: "Open Local Media",
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				const input = document.createElement("input");
-				input.setAttribute("type", "file");
-				input.accept = "video/*, audio/*, .mpd, .flv";
-				input.onchange = (e: any) => {
-				  var url = e.target.files[0].path.trim();
-				  this.activateView(url, null);
-				  editor.replaceSelection("\n" + "```timestamp-url \n " + url + "\n ```\n");
-				};	  
-			  input.click();
-			},
-		  });
+		// this.addCommand({
+		// 	id: "add-local-media",
+		// 	name: "Open Local Media",
+		// 	editorCallback: (editor: Editor, view: MarkdownView) => {
+		// 		const input = document.createElement("input");
+		// 		input.setAttribute("type", "file");
+		// 		input.accept = "video/*, audio/*, .mpd, .flv";
+		// 		input.onchange = (e: any) => {
+		// 		  var url = e.target.files[0].path.trim();
+		// 		  this.activateView(url, null);
+		// 		  editor.replaceSelection("\n" + "```timestamp-url \n " + url + "\n ```\n");
+		// 		};
+		// 	  input.click();
+		// 	},
+		//   });
+		//
+		// this.addCommand({
+		// 	id: "add-subtitles",
+		// 	name: "Add subtitle file",
+		// 	callback: async () => {
+		// 		if (!this.player) {
+		// 			return new Notice("Player is not working right now")
+		// 		}
+		// 		var input = document.createElement("input");
+		// 		input.type = "file";
+		// 		input.accept = ".srt,.vtt";
+		// 		input.onchange = (e: any) => {
+		// 		var files = e.target.files;
+		// 		for (let i = 0; i < files.length; i++) {
+		// 			var file = files[i];
+		// 			var track = document.createElement("track");
+		// 			track.kind = "subtitles";
+		// 			track.label = file.name;
+		// 			track.src = subtitleRedirect(file.path);
+		// 			// track.mode = i == files.length - 1 ? "showing" : "hidden";
+		// 			this.player.getInternalPlayer().appendChild(track);
+		// 		}
+		// 		};
+		//
+		// 		input.click();
+		// 	},
+		// });
 
-		this.addCommand({
-			id: "add-subtitles",
-			name: "Add subtitle file",
-			callback: async () => {
-				if (!this.player) {
-					return new Notice("Player is not working right now")
-				}
-				var input = document.createElement("input");
-				input.type = "file";
-				input.accept = ".srt,.vtt";
-				input.onchange = (e: any) => {
-				var files = e.target.files;
-				for (let i = 0; i < files.length; i++) {
-					var file = files[i];
-					var track = document.createElement("track");
-					track.kind = "subtitles";
-					track.label = file.name;
-					track.src = subtitleRedirect(file.path);
-					// track.mode = i == files.length - 1 ? "showing" : "hidden";
-					this.player.getInternalPlayer().appendChild(track);
-				}
-				};
-		
-				input.click();
-			},
-		});
-
-		this.addCommand({
-			id: "video-snapshot",
-			name: "Take and copy to clipboard snapshot from video",
-			callback: async () => {
-			  await this.copySnapshot()
-			},
-		  });
+		// this.addCommand({
+		// 	id: "video-snapshot",
+		// 	name: "Take and copy to clipboard snapshot from video",
+		// 	callback: async () => {
+		// 	  await this.copySnapshot()
+		// 	},
+		//   });
 	  
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new TimestampPluginSettingTab(this.app, this));
 	}
 
-	async copySnapshot() {
-		// https://github.com/ilkkao/capture-video-frame/blob/master/capture-video-frame.js
-		if (!this.player) return;
-		var video = document.querySelector("video");
-		if (!video || video.videoHeight==0 || video.videoWidth==0) {
-			return new Notice("Current player is not supported for taking snapshot!");
-		}
-
-		var canvas = document.createElement("canvas");
-
-		canvas.width = video.videoWidth;
-		canvas.height = video.videoHeight;
-
-		canvas.getContext("2d").drawImage(video, 0, 0);
-
-		// https://stackoverflow.com/a/60401130
-		canvas.toBlob(async (blob) => {
-			navigator.clipboard
-				.write([
-					new ClipboardItem({
-						[blob.type]: blob,
-					}),
-				])
-				.then(async () => {
-					// document.execCommand("paste");
-					new Notice("Snapshot copied to clipboard!");
-				});
-		});
-	}
+	// async copySnapshot() {
+	// 	// https://github.com/ilkkao/capture-video-frame/blob/master/capture-video-frame.js
+	// 	if (!this.player) return;
+	// 	var video = document.querySelector("video");
+	// 	if (!video || video.videoHeight==0 || video.videoWidth==0) {
+	// 		return new Notice("Current player is not supported for taking snapshot!");
+	// 	}
+	//
+	// 	var canvas = document.createElement("canvas");
+	//
+	// 	canvas.width = video.videoWidth;
+	// 	canvas.height = video.videoHeight;
+	//
+	// 	canvas.getContext("2d").drawImage(video, 0, 0);
+	//
+	// 	// https://stackoverflow.com/a/60401130
+	// 	canvas.toBlob(async (blob) => {
+	// 		navigator.clipboard
+	// 			.write([
+	// 				new ClipboardItem({
+	// 					[blob.type]: blob,
+	// 				}),
+	// 			])
+	// 			.then(async () => {
+	// 				// document.execCommand("paste");
+	// 				new Notice("Snapshot copied to clipboard!");
+	// 			});
+	// 	});
+	// }
 
 	async onunload() {
-		this.player = null;
-		this.setPlaying = null;
 		this.app.workspace.detachLeavesOfType(VIDEO_VIEW);
 		this.server.close();
 	}
 
+	getVideoLeaf() {
+		return this.app.workspace.getLeavesOfType(VIDEO_VIEW).filter(leaf => leaf.view instanceof VideoView).first()
+	}
+
 	// This is called when a valid url is found => it activates the View which loads the React view
-	async activateView(url: string, seconds: number|null) {
+	async play(url: string|undefined, seconds: number|undefined) {
 		// this.app.workspace.detachLeavesOfType(VIDEO_VIEW);
 		if (this.app.workspace.getLeavesOfType(VIDEO_VIEW).length == 0) {
 			await this.app.workspace.getRightLeaf(false).setViewState({
@@ -341,41 +291,19 @@ export default class TimestampPlugin extends Plugin {
 				active: true,
 			});
 		}
-		// this.app.workspace.revealLeaf(
-		// 	this.app.workspace.getLeavesOfType(VIDEO_VIEW)[0]
-		// );
 
 		// This triggers the React component to be loaded
-		const videoLeaf = this.app.workspace.getLeavesOfType(VIDEO_VIEW).filter(leaf => leaf.view instanceof VideoView).first()
+		const videoLeaf = this.getVideoLeaf()
 		if (!videoLeaf) return
 
-
-		// const setupPlayer = (player: ReactPlayer, setPlaying: React.Dispatch<React.SetStateAction<boolean>>) => {
-		// 	this.player = player;
-		// 	this.setPlaying = setPlaying;
-		// }
-		//
-		// const setupError = (err: string) => {
-		// 	editor.replaceSelection(editor.getSelection() + `\n> [!error] Streaming Error \n> ${err}\n`);
-		// }
-		//
-		// const onCapture = () => {
-		// 	this.copySnapshot().catch()
-		// }
-		//
-		// const saveTimeOnUnload = async () => {
-		// 	if (this.player) {
-		// 		this.settings.urlStartTimeMap.set(url, Number(this.player.getCurrentTime().toFixed(0)));
-		// 	}
-		// 	await this.saveSettings();
-		// }
-
-
-		// create a new video instance, sets up state/unload functionality, and passes in a start time if available else 0
-		videoLeaf.setEphemeralState({
-			url: url,
-			start: seconds ?? (this.settings.startAtLastPosition ? ~~this.settings.urlStartTimeMap.get(url) : 0)
-		});
+		if (url) {
+			VideoPanelPlay(videoLeaf, {
+				url: url,
+				seekTime: seconds ?? (this.settings.startAtLastPosition ? ~~(this.settings.urlStartTimeMap.get(url) ?? 0) : 0)
+			})
+		} else if (seconds) {
+			VideoPanelSeekTo(videoLeaf, seconds)
+		}
 
 		await this.saveSettings();
 	}

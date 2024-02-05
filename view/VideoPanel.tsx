@@ -35,10 +35,28 @@ export type VideoPlaySpec = {
   start: number
 }
 
+
+export type PlayItem = {
+  playingUrl: string
+  displayUrl: string
+  subtitles: any[]
+}
+
+
+export type VideoPanelStatesAccessor = {
+  getRawUrl: ()=>string|null
+  setRawUrl:  React.Dispatch<React.SetStateAction<string|null>>
+
+  getPlayItem: ()=>PlayItem|null
+  setPlayItem:  React.Dispatch<React.SetStateAction<PlayItem|null>>
+
+  getPlaying: ()=>boolean
+  setPlaying: React.Dispatch<React.SetStateAction<boolean>>
+}
+
 export type VideoPanelProps = {
-  spec: VideoPlaySpec|null
-  clickTime: number,
-  onPlayerReady: (player: ReactPlayer, setPlaying: React.Dispatch<React.SetStateAction<boolean>>) => void;
+  onExportStateAccess: (statesAccessor: VideoPanelStatesAccessor)=>void,
+  onPlayerReady: (player: ReactPlayer)=>void
 }
 
 export const HStack = styled.div`
@@ -50,13 +68,6 @@ export const HStack = styled.div`
   justify-content: start;
   align-items: center;
 `
-
-
-type PlayItem = {
-  playingUrl: string
-  displayUrl: string
-  subtitles: any[]
-}
 
 async function getPlayItem(rawUrl: string|null): Promise<PlayItem | null> {
   if (rawUrl === null)
@@ -89,31 +100,34 @@ async function getPlayItem(rawUrl: string|null): Promise<PlayItem | null> {
 }
 
 export function VideoPanel(props: VideoPanelProps) {
+  const [rawUrl, setRawUrl] = useState<string|null>(null)
   const [playItem, setPlayItem] = useState<PlayItem|null>(null)
   const [editingUrl, setEditingUrl] = useState<string>("")
-  // Reference to player passed back to the setupPlayer prop
-  const playerRef = useRef<ReactPlayer>();
-
   const [playing, setPlaying] = useState(true)
 
-  const onReady = () => {
-    // Starts player at last played time if the video has been played before
-    if (props.spec && playerRef.current.getCurrentTime() <= 0) playerRef.current.seekTo(props.spec.start);
+  useEffect(() => {
+    props.onExportStateAccess({
+      getRawUrl: ()=>rawUrl,
+      setRawUrl: (rawUrl)=>setRawUrl(rawUrl),
 
-    // Sets up video player to be accessed in main.ts
-    if (playerRef) props.onPlayerReady(playerRef.current, setPlaying);
-  }
+      getPlayItem: ()=>playItem,
+      setPlayItem: (playItem)=>setPlayItem(playItem),
 
+      getPlaying: ()=>playing,
+      setPlaying: (playing)=>setPlaying(playing),
+    })
+  }, []);
 
   useEffect(() => {
-    console.log("SPEC", props.spec)
-    if (props.spec) {
-      getPlayItem(props.spec.url).then(r => {
-        setEditingUrl(r.displayUrl)
+    if (rawUrl) {
+      getPlayItem(rawUrl).then(r => {
+        setEditingUrl(r?.displayUrl ?? "")
         setPlayItem(r)
       })
+    } else {
+      setPlayItem(null)
     }
-  }, [props.clickTime]);
+  }, [rawUrl]);
 
   function onCapture() {
 
@@ -125,10 +139,14 @@ export function VideoPanel(props: VideoPanelProps) {
         <input type={"text"} style={{flexGrow: 1}}  value={editingUrl} onChange={e=>{setEditingUrl(e.currentTarget.value)}} onKeyUp={event => {
           if (event.key === "Enter") {
             event.preventDefault();
-            getPlayItem(event.currentTarget.value).then(r => setPlayItem(r))
+            setRawUrl(event.currentTarget.value)
           }
         }}/>
-        {playItem && <div className={"clickable-icon"} onClick={()=>setPlayItem(null)}>
+        <div className={"clickable-icon"} onClick={()=>setRawUrl(null)}>
+          <IconView name={"folder"}/>
+        </div>
+
+        {playItem && <div className={"clickable-icon"} onClick={()=>setRawUrl(null)}>
           <IconView name={"power"}/>
         </div>}
 
@@ -138,7 +156,6 @@ export function VideoPanel(props: VideoPanelProps) {
         <>
           <div style={{width:'100%', aspectRatio: '16/9', marginTop: 10, borderRadius: 8, overflow: "hidden"}}>
             <ReactPlayer
-              ref={playerRef}
               url={playItem.playingUrl}
               playing={playing}
               controls={true}
@@ -156,7 +173,9 @@ export function VideoPanel(props: VideoPanelProps) {
                   tracks: playItem.subtitles,
                 },
               }}
-              onReady={onReady}
+              onPlay={()=>setPlaying(true)}
+              onPause={()=>setPlaying(false)}
+              onReady={player => props.onPlayerReady(player)}
               onError={(err) => {
                 const errMsg = err ?
                   err.message :
