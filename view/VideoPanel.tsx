@@ -116,7 +116,7 @@ export function VideoPanel(props: VideoPanelProps) {
       getPlaying: ()=>playing,
       setPlaying: (playing)=>setPlaying(playing),
     })
-  }, []);
+  }, [rawUrl, playItem, playing]);
 
   useEffect(() => {
     if (rawUrl) {
