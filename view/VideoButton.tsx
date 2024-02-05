@@ -17,16 +17,16 @@ const Container = styled.div`
   width: fit-content;
   gap: 6px;
   padding: 6px 10px;
-  border: 1px solid lightgray;
+  border: 1px solid var(--color-base-50);
   border-radius: 4px;
   cursor: default;
   &:hover {
-    background-color: lightgray;
+    background-color: var(--color-base-30);
   }
 `
 
 const Time = styled.div`
-  color: gray;
+  color: var(--color-base-60);
   flex-shrink: 0;
   padding: 0 2px;
   font-family: monospace;

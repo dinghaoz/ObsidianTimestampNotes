@@ -242,36 +242,6 @@ export default class TimestampPlugin extends Plugin {
 		this.addSettingTab(new TimestampPluginSettingTab(this.app, this));
 	}
 
-	// async copySnapshot() {
-	// 	// https://github.com/ilkkao/capture-video-frame/blob/master/capture-video-frame.js
-	// 	if (!this.player) return;
-	// 	var video = document.querySelector("video");
-	// 	if (!video || video.videoHeight==0 || video.videoWidth==0) {
-	// 		return new Notice("Current player is not supported for taking snapshot!");
-	// 	}
-	//
-	// 	var canvas = document.createElement("canvas");
-	//
-	// 	canvas.width = video.videoWidth;
-	// 	canvas.height = video.videoHeight;
-	//
-	// 	canvas.getContext("2d").drawImage(video, 0, 0);
-	//
-	// 	// https://stackoverflow.com/a/60401130
-	// 	canvas.toBlob(async (blob) => {
-	// 		navigator.clipboard
-	// 			.write([
-	// 				new ClipboardItem({
-	// 					[blob.type]: blob,
-	// 				}),
-	// 			])
-	// 			.then(async () => {
-	// 				// document.execCommand("paste");
-	// 				new Notice("Snapshot copied to clipboard!");
-	// 			});
-	// 	});
-	// }
-
 	async onunload() {
 		this.app.workspace.detachLeavesOfType(VIDEO_VIEW);
 		this.server.close();
