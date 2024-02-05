@@ -7,7 +7,7 @@ import { AddressInfo } from "node:net";
 import languageEncoding from "detect-file-encoding-and-language";
 import { biliRedirects } from "./bilibili";
 
-export var server: http.Server = undefined;
+export var server: http.Server;
 export var PORT: number;
 export var HOST = "127.0.0.1";
 
@@ -88,8 +88,8 @@ export function startServer(port_: any) {
     app.get(`/${subtitleRoute}/*`, async function (req, res) {
       var path = decodeURI(req.url.split(`/${subtitleRoute}/`)[1]).replace(/^\"(.+)\"$/, "$1");
       var srt_ = fs.readFileSync(path);
-      var encoding = (await languageEncoding(path)).encoding;
-      let decoder = new TextDecoder(encoding); // default 'utf-8' or 'utf8'
+      const encoding = (await languageEncoding(path)).encoding;
+      let decoder = new TextDecoder(encoding ?? undefined); // default 'utf-8' or 'utf8'
       var srt = decoder.decode(srt_);
       var vtt;
       if (path.endsWith(".srt")) {

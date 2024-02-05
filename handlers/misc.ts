@@ -5,8 +5,9 @@ export function cleanUrl(url: string) {
   var urlregex = new RegExp(
     /((https:\/\/www\.|http:\/\/www\.|https:\/\/|http:\/\/)?[a-zA-Z]{2,}(\.[a-zA-Z]{2,})(\.[a-zA-Z]{2,})?\/[a-zA-Z0-9]{2,}|((https:\/\/www\.|http:\/\/www\.|https:\/\/|http:\/\/)?[a-zA-Z]{2,}(\.[a-zA-Z]{2,})(\.[a-zA-Z]{2,})?)|(https:\/\/www\.|http:\/\/www\.|https:\/\/|http:\/\/)?[a-zA-Z0-9]{2,}\.[a-zA-Z0-9]{2,}\.[a-zA-Z0-9]{2,}(\.[a-zA-Z0-9]{2,})|http:\/\/127\.0\.0\.1:[0-9]|http:\/\/localhost:[0-9])[^\s]+/gi
   );
-  if (url.match(urlregex)) {
-    url = url.match(urlregex)[0].toString();
+  const matched = url.match(urlregex)
+  if (matched) {
+    url = matched[0].toString();
     url = /^[https|http]/.test(url) ? url : "https://" + url;
   }
   return url;

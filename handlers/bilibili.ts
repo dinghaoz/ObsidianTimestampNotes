@@ -22,7 +22,7 @@ export function isBiliUrl(url: string) {
 function redirect_b23(url: string) {
   return new Promise<string>((resolve) => {
     https.get((/^(https|http):\/\//.test(url) ? "" : "https://") + url, { method: "HEAD" }, async (res) => {
-      resolve(res.headers.location);
+      resolve(res.headers.location ?? "");
     });
   });
 }
@@ -34,12 +34,17 @@ export function getBiliInfo(url: string) {
       url = (await redirect_b23(url)).toString();
     }
 
-    var api_view_params;
-    if (url.match(/\/bv[A-Za-z0-9}]{10}/gi)) {
-      api_view_params = { bvid: url.match(/\/bv[A-Za-z0-9}]{10}/gi)[0].slice(1) };
-    } else if (url.match(/\/av\d{8}/gi)) {
-      api_view_params = { aid: url.match(/\/av\d{8}/gi)[0].slice(3) };
+    let api_view_params: {bvid? : string, aid? : string} = {};
+    const matched_bvid = url.match(/\/bv[A-Za-z0-9}]{10}/gi)
+    if (matched_bvid) {
+      api_view_params = {bvid: matched_bvid[0].slice(1)};
+    } else {
+      const matched_aid = url.match(/\/av\d{8}/gi)
+      if (matched_aid) {
+        api_view_params = { aid: matched_aid[0].slice(3) };
+      }
     }
+
     var page_number = url.match(/(?<=\?p=)\d+/i)?.[0] || "1";
 
     var api_view_url = "https://api.bilibili.com/x/web-interface/view";
@@ -48,7 +53,7 @@ export function getBiliInfo(url: string) {
     var page = cid_res.data.pages.find((p: any) => p.page == page_number);
     var cid = page.cid;
 
-    var params = { bvid: api_view_params.bvid || cid_res.data.bvid, cid: cid };
+    var params = { bvid: api_view_params?.bvid || cid_res.data.bvid, cid: cid };
 
     var subtitles: any[] = [];
     var subArr: any[];
