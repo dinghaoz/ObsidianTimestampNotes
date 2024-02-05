@@ -47,7 +47,7 @@ export function VideoButton(props: {data: VideoButtonData, onClick: ()=>void}) {
 
   return (
     <Container onClick={props.onClick}>
-      <IconView name={"video"}/>
+      <IconView name={"youtube"}/>
       {props.data.ts && <Time>{props.data.ts}</Time>}
       {title && <Title>{title}</Title>}
     </Container>

@@ -34,9 +34,11 @@ export type GetStampCommand = {
 	callback: (rawUrl: string|null, playItem: PlayItem|null, playTime: number|null)=>void
 }
 
+export type VideoActionId = "add-local-media" | "add-subtitles" | "video-snapshot" | "close-video"
+
 export type ActionCommand = {
 	commandName: "action",
-	action: "add-local-media" | "add-subtitles" | "video-snapshot" | "close-video"
+	action: VideoActionId
 }
 
 export type PlayerCommand = PlayCommand | SeekCommand | ToggleCommand | SeekToCommand | GetStampCommand | ActionCommand
@@ -197,7 +199,7 @@ export class VideoView extends ItemView {
 	}
 
 	getIcon(): string {
-		return "video";
+		return "youtube";
 	}
 
 	setEphemeralState(state: VideoViewEphemeralState) {

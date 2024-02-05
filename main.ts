@@ -7,7 +7,7 @@ import {
 	VideoPanelPlay,
 	VideoPanelSeekTo,
 	VideoPanelGetStamp,
-	VideoPanelToggle, VideoPanelSeek
+	VideoPanelToggle, VideoPanelSeek, VideoPanelPerformAction, VideoActionId
 } from './view/VideoView';
 import { TimestampPluginSettings, TimestampPluginSettingTab, DEFAULT_SETTINGS } from 'settings';
 
@@ -90,7 +90,7 @@ export default class TimestampPlugin extends Plugin {
 			id: 'trigger-player',
 			name: 'Open video player (copy video url and use hotkey)',
 			editorCallback: async (editor, view) => {
-				// Get selected text or clipboard content and match against video url to convert link to video video id
+				// Get selected text or clipboard content and match against video url to convert link to video id
 				const url = editor.getSelection().trim() || (await navigator.clipboard.readText()).trim();
 
 				// Activate the view with the valid link
@@ -151,7 +151,7 @@ export default class TimestampPlugin extends Plugin {
 		//Command that play/pauses the video
 		this.addCommand({
 			id: 'pause-player',
-			name: 'Pause player',
+			name: 'Play/Pause player',
 			callback: () => {
 				const videoLeaf = this.getVideoLeaf()
 				if (!videoLeaf) return;
@@ -185,58 +185,24 @@ export default class TimestampPlugin extends Plugin {
 			}
 		});
 
+		const actionCmds = [
+			{id: "add-local-media", name: "Open a Local Media File"},
+			{id: "add-subtitles", name: "Add Subtitle Files"},
+			{id: "video-snapshot", name: "Capture Video Snapshot and Copy it into Clipboard"}
+		] as {id: VideoActionId, name: string}[]
 
-		// this.addCommand({
-		// 	id: "add-local-media",
-		// 	name: "Open Local Media",
-		// 	editorCallback: (editor: Editor, view: MarkdownView) => {
-		// 		const input = document.createElement("input");
-		// 		input.setAttribute("type", "file");
-		// 		input.accept = "video/*, audio/*, .mpd, .flv";
-		// 		input.onchange = (e: any) => {
-		// 		  var url = e.target.files[0].path.trim();
-		// 		  this.activateView(url, null);
-		// 		  editor.replaceSelection("\n" + "```timestamp-url \n " + url + "\n ```\n");
-		// 		};
-		// 	  input.click();
-		// 	},
-		//   });
-		//
-		// this.addCommand({
-		// 	id: "add-subtitles",
-		// 	name: "Add subtitle file",
-		// 	callback: async () => {
-		// 		if (!this.player) {
-		// 			return new Notice("Player is not working right now")
-		// 		}
-		// 		var input = document.createElement("input");
-		// 		input.type = "file";
-		// 		input.accept = ".srt,.vtt";
-		// 		input.onchange = (e: any) => {
-		// 		var files = e.target.files;
-		// 		for (let i = 0; i < files.length; i++) {
-		// 			var file = files[i];
-		// 			var track = document.createElement("track");
-		// 			track.kind = "subtitles";
-		// 			track.label = file.name;
-		// 			track.src = subtitleRedirect(file.path);
-		// 			// track.mode = i == files.length - 1 ? "showing" : "hidden";
-		// 			this.player.getInternalPlayer().appendChild(track);
-		// 		}
-		// 		};
-		//
-		// 		input.click();
-		// 	},
-		// });
+		actionCmds.forEach(cmd => {
+			this.addCommand({
+				id: cmd.id,
+				name: cmd.name,
+				editorCallback: (editor, view) => {
+					const videoLeaf = this.getVideoLeaf()
+					if (!videoLeaf) return;
 
-		// this.addCommand({
-		// 	id: "video-snapshot",
-		// 	name: "Take and copy to clipboard snapshot from video",
-		// 	callback: async () => {
-		// 	  await this.copySnapshot()
-		// 	},
-		//   });
-	  
+					VideoPanelPerformAction(videoLeaf, cmd.id)
+				}
+			})
+		})
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new TimestampPluginSettingTab(this.app, this));
