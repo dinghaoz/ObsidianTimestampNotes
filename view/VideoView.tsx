@@ -213,11 +213,9 @@ export class VideoView extends ItemView {
 			case "play":
 				this.statesAccessor.setRawUrl(state.url)
 				this.statesAccessor.setPlaying(true)
-				if (this.player) {
-					this.player.seekTo(state.seekTime)
-				} else {
-					this.pendingSeekTime = state.seekTime
-				}
+				// don't seek until player ready
+				this.pendingSeekTime = state.seekTime
+
 				break
 			case "seek":
 				if (this.player) {
