@@ -120,9 +120,9 @@ export function VideoPanel(props: VideoPanelProps) {
 
   useEffect(() => {
     if (rawUrl) {
-      getPlayItem(rawUrl).then(r => {
-        setEditingUrl(r?.displayUrl ?? "")
-        setPlayItem(r)
+      getPlayItem(rawUrl).then(playItem => {
+        setEditingUrl(playItem?.displayUrl ?? "")
+        setPlayItem(playItem)
       })
     } else {
       setPlayItem(null)
