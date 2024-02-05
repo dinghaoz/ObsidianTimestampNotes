@@ -66,6 +66,11 @@ export const HStack = styled.div`
   align-items: center;
 `
 
+const Favicon = styled.img`
+  width: 16px;
+  height: 16px;
+`
+
 async function getPlayItem(rawUrl: string|null): Promise<PlayItem | null> {
   if (rawUrl === null)
     return null
@@ -96,11 +101,19 @@ async function getPlayItem(rawUrl: string|null): Promise<PlayItem | null> {
   }
 }
 
+function getFaviconUrl(urlStr: string) {
+  if (isLocalFile(urlStr)) return null
+  const url = new URL(urlStr)
+  return `${url.protocol}//${url.hostname}/favicon.ico`
+}
+
 export function VideoPanel(props: VideoPanelProps) {
   const [rawUrl, setRawUrl] = useState<string|null>(null)
   const [playItem, setPlayItem] = useState<PlayItem|null>(null)
   const [editingUrl, setEditingUrl] = useState<string>("")
   const [playing, setPlaying] = useState(true)
+
+  const [faviconUrl, setFaviconUrl] = useState<string|null>(null)
 
   useEffect(() => {
     props.onExportStateAccess({
@@ -116,6 +129,14 @@ export function VideoPanel(props: VideoPanelProps) {
   }, [rawUrl, playItem, playing]);
 
   useEffect(() => {
+    if (playItem) {
+      setFaviconUrl(getFaviconUrl(playItem.displayUrl))
+    } else {
+      setFaviconUrl(null)
+    }
+  }, [playItem]);
+
+  useEffect(() => {
     if (rawUrl) {
       getPlayItem(rawUrl).then(playItem => {
         setEditingUrl(playItem?.displayUrl ?? "")
@@ -128,6 +149,7 @@ export function VideoPanel(props: VideoPanelProps) {
 
   return (<Container>
       <HStack style={{gap: 6}}>
+        {faviconUrl && <Favicon src={faviconUrl}/> }
         <input type={"text"} style={{flexGrow: 1}}  value={editingUrl} onChange={e=>{setEditingUrl(e.currentTarget.value)}} onKeyUp={event => {
           if (event.key === "Enter") {
             event.preventDefault();
