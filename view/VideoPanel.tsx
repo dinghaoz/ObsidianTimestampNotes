@@ -30,11 +30,6 @@ const Button = styled.div`
   text-align: center;
 `
 
-export type VideoPlaySpec = {
-  url: string
-  start: number
-}
-
 
 export type PlayItem = {
   playingUrl: string
