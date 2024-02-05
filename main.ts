@@ -68,7 +68,7 @@ export default class TimestampPlugin extends Plugin {
 			}
 
 
-			let seconds: number
+			let seconds: number|null = null
 			if (content.ts) {
 				const match = content.ts.match(/\d+:\d+:\d+|\d+:\d+/g)
 				if (match) {
@@ -80,7 +80,7 @@ export default class TimestampPlugin extends Plugin {
 			root.render(React.createElement(VideoButton, {
 				data: content,
 				onClick: ()=> {
-					this.play(content.url, seconds)
+					this.play(content.url ?? null, seconds)
 				}
 			}, null))
 		});
@@ -95,7 +95,6 @@ export default class TimestampPlugin extends Plugin {
 
 				// Activate the view with the valid link
 				if (isLocalFile(url) || ReactPlayer.canPlay(url) || isBiliUrl(url)) {
-					this.play(url, 0).catch();
 					const noteTitle = this.settings.noteTitle
 					let content = ""
 					if (noteTitle) {
@@ -283,7 +282,7 @@ export default class TimestampPlugin extends Plugin {
 	}
 
 	// This is called when a valid url is found => it activates the View which loads the React view
-	async play(url: string|undefined, seconds: number|undefined) {
+	async play(url: string|null, seconds: number|null) {
 		// this.app.workspace.detachLeavesOfType(VIDEO_VIEW);
 		if (this.app.workspace.getLeavesOfType(VIDEO_VIEW).length == 0) {
 			await this.app.workspace.getRightLeaf(false).setViewState({

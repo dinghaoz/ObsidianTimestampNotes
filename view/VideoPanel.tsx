@@ -134,6 +134,19 @@ export function VideoPanel(props: VideoPanelProps) {
   }
 
 
+  function onChooseFile() {
+    const input = document.createElement("input");
+    input.setAttribute("type", "file");
+    input.accept = "video/*, audio/*, .mpd, .flv";
+    input.onchange = (e: any) => {
+      const url = e.target.files[0].path.trim();
+      if (url) {
+        setRawUrl(url)
+      }
+    };
+    input.click();
+  }
+
   return (<Container>
       <HStack style={{gap: 6}}>
         <input type={"text"} style={{flexGrow: 1}}  value={editingUrl} onChange={e=>{setEditingUrl(e.currentTarget.value)}} onKeyUp={event => {
@@ -142,7 +155,7 @@ export function VideoPanel(props: VideoPanelProps) {
             setRawUrl(event.currentTarget.value)
           }
         }}/>
-        <div className={"clickable-icon"} onClick={()=>setRawUrl(null)}>
+        <div className={"clickable-icon"} onClick={onChooseFile}>
           <IconView name={"folder"}/>
         </div>
 
