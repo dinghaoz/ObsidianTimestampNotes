@@ -1,9 +1,9 @@
-import {ItemView, Menu, WorkspaceLeaf} from 'obsidian';
+import {ItemView, Menu, Notice, WorkspaceLeaf} from 'obsidian';
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { createRoot, Root } from 'react-dom/client';
 
-import {PlayItem, VideoPanel, VideoPanelProps, VideoPanelStatesAccessor, VideoPlaySpec} from "./VideoPanel";
+import {PlayItem, VideoPanel, VideoPanelStatesAccessor} from "./VideoPanel";
 import ReactPlayer from "react-player/lazy";
 import {subtitleRedirect} from "../handlers/server";
 
@@ -34,7 +34,12 @@ export type GetStampCommand = {
 	callback: (rawUrl: string|null, playItem: PlayItem|null, playTime: number|null)=>void
 }
 
-export type PlayerCommand = PlayCommand | SeekCommand | ToggleCommand | SeekToCommand | GetStampCommand
+export type ActionCommand = {
+	commandName: "action",
+	action: "add-local-media" | "add-subtitles" | "video-snapshot" | "close-video"
+}
+
+export type PlayerCommand = PlayCommand | SeekCommand | ToggleCommand | SeekToCommand | GetStampCommand | ActionCommand
 
 export type VideoViewEphemeralState = PlayerCommand | {focus?: boolean}
 
@@ -100,12 +105,52 @@ export class VideoView extends ItemView {
 			}
 
 			menu.addItem(item => item
+				.setTitle("Capture Snapshot")
+				.onClick(() => this.captureSnapshot())
+			)
+
+			menu.addItem(item => item
 				.setTitle("Close")
 				.onClick(()=>this.statesAccessor?.setRawUrl(null))
 			);
 		}
 
 		menu.showAtMouseEvent(event.nativeEvent);
+	}
+
+	captureSnapshot() {
+		const video = document.querySelector("video");
+		if (!video || video.videoHeight==0 || video.videoWidth==0) {
+			new Notice("Current player is not supported for taking snapshot!");
+			return
+		}
+
+		const canvas = document.createElement("canvas");
+
+		canvas.width = video.videoWidth;
+		canvas.height = video.videoHeight;
+
+		const context = canvas.getContext("2d")
+		if (!context) return
+
+		context.drawImage(video, 0, 0);
+
+		// https://stackoverflow.com/a/60401130
+		canvas.toBlob(async (blob) => {
+			if (!blob) return
+
+			navigator.clipboard
+				.write([
+					// @ts-ignore
+					new ClipboardItem({
+						[blob.type]: blob,
+					}),
+				])
+				.then(async () => {
+					// document.execCommand("paste");
+					new Notice("Snapshot copied to clipboard!");
+				});
+		});
 	}
 
 	chooseLocalFile() {
@@ -188,6 +233,21 @@ export class VideoView extends ItemView {
 			case "getStamp":
 				state.callback(this.statesAccessor.getRawUrl(), this.statesAccessor.getPlayItem(), this.player?.getCurrentTime() ?? null)
 				break
+			case "action":
+				switch (state.action) {
+					case "add-local-media":
+						this.chooseLocalFile()
+						break
+					case "add-subtitles":
+						this.chooseSubtitles()
+						break
+					case "video-snapshot":
+						this.captureSnapshot()
+						break
+					case "close-video":
+						this.statesAccessor.setRawUrl(null)
+						break
+				}
 		}
 	}
 
@@ -232,5 +292,12 @@ export function VideoPanelGetStamp(leaf: WorkspaceLeaf, callback: GetStampComman
 	leaf.setEphemeralState({
 		commandName: "getStamp",
 		callback: callback
+	})
+}
+
+export function VideoPanelPerformAction(leaf: WorkspaceLeaf, action: ActionCommand["action"]) {
+	leaf.setEphemeralState({
+		commandName: "action",
+		action: action
 	})
 }

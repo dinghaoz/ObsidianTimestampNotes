@@ -126,10 +126,6 @@ export function VideoPanel(props: VideoPanelProps) {
     }
   }, [rawUrl]);
 
-  function onCapture() {
-
-  }
-
   return (<Container>
       <HStack style={{gap: 6}}>
         <input type={"text"} style={{flexGrow: 1}}  value={editingUrl} onChange={e=>{setEditingUrl(e.currentTarget.value)}} onKeyUp={event => {
@@ -181,7 +177,6 @@ export function VideoPanel(props: VideoPanelProps) {
               }} // Error handling for invalid URLs
             />
           </div>
-          <Button style={{marginTop:10}} onClick={onCapture}>Copy Snapshot</Button>
         </>
       }
 
