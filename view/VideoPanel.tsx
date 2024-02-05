@@ -169,6 +169,7 @@ export function VideoPanel(props: VideoPanelProps) {
         <>
           <div style={{width:'100%', aspectRatio: '16/9', marginTop: 10, borderRadius: 8, overflow: "hidden"}}>
             <ReactPlayer
+              key={playItem.displayUrl}
               url={playItem.playingUrl}
               playing={playing}
               controls={true}
