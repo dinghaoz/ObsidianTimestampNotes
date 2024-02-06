@@ -20,6 +20,7 @@ export type PlayItem = {
   playingUrl: string
   displayUrl: string
   subtitles: any[]
+  playerKey: string
 }
 
 
@@ -67,21 +68,24 @@ async function getPlayItem(rawUrl: string|null): Promise<PlayItem | null> {
     return {
       playingUrl: playingUrl,
       displayUrl: displayUrl,
-      subtitles: []
+      subtitles: [],
+      playerKey: "local"
     }
   } else if (isBiliUrl(rawUrl)) {
     let bili_info = await getBiliInfo(rawUrl);
     return {
       playingUrl: bili_info.url,
       displayUrl: rawUrl,
-      subtitles: bili_info.subtitles
+      subtitles: bili_info.subtitles,
+      playerKey: "other"
     }
   } else{
     const cleaned = cleanUrl(rawUrl)
     return {
       playingUrl: cleaned,
       displayUrl: cleaned,
-      subtitles: []
+      subtitles: [],
+      playerKey: "other"
     }
   }
 }
@@ -147,11 +151,11 @@ export function VideoPanel(props: VideoPanelProps) {
 
       </HStack>
 
-      {playItem &&
+      {(playItem) &&
         <>
           <div style={{width:'100%', aspectRatio: '16/9', marginTop: 10, borderRadius: 8, overflow: "hidden"}}>
             <ReactPlayer
-              key={playItem.displayUrl}
+              key={playItem.playerKey}
               url={playItem.playingUrl}
               playing={playing}
               controls={true}
