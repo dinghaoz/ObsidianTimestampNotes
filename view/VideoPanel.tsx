@@ -164,7 +164,7 @@ export function VideoPanel(props: VideoPanelProps) {
 
       {playItem &&
         <>
-          <div style={{width:'100%', aspectRatio: '16/9', marginTop: 10, borderRadius: 8, overflow: "hidden"}}>
+          <div style={{width:'100%', aspectRatio: '16/9', marginTop: 10, borderRadius: 8, overflow: "hidden", background: "black"}}>
             <ReactPlayer
               key={playItem.playerKey}
               url={playItem.playingUrl}
