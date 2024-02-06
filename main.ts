@@ -18,7 +18,8 @@ import { isLocalFile, cleanUrl, isSameVideo } from "handlers/misc";
 import { getBiliInfo, isBiliUrl } from 'handlers/bilibili';
 import React, {ReactDOM} from "react";
 import {createRoot} from "react-dom/client";
-import {VideoButton, VideoButtonData} from "./view/VideoButton";
+import {VideoButton} from "./view/VideoButton";
+import {makeVideoNote, VideoNoteData} from "./VideoNote";
 
 const ERRORS: { [key: string]: string } = {
 	"INVALID_URL": "\n> [!error] Invalid Video URL\n> The highlighted link is not a valid video url. Please try again with a valid link.\n",
@@ -53,7 +54,7 @@ export default class TimestampPlugin extends Plugin {
 		// Markdown processor that turns video urls into buttons to open views of the video
 		this.registerMarkdownCodeBlockProcessor("video-note", (source, el, ctx) => {
 
-			let content: VideoButtonData
+			let content: VideoNoteData
 			try {
 				content = parseYaml(source.trim())
 			} catch (e) {
@@ -117,13 +118,13 @@ export default class TimestampPlugin extends Plugin {
 
 		// This command inserts the timestamp of the playing video into the editor
 		this.addCommand({
-			id: 'timestamp-insert',
-			name: 'Insert timestamp based on videos current play time',
+			id: 'video-note-insert-time',
+			name: 'Insert Video Note from current video',
 			editorCallback: (editor, view) => {
 				const videoLeaf = this.getVideoLeaf()
 				if (!videoLeaf) return;
 
-				VideoPanelGetStamp(videoLeaf, (rawUrl, playItem, playTime)=> {
+				VideoPanelGetStamp(videoLeaf, (rawUrl, playItem, videoTitle, playTime)=> {
 					if (playItem && playTime) {
 						const leadingZero = (num: number) => num < 10 ? "0" + num.toFixed(0) : num.toFixed(0);
 						const totalSeconds = Number(playTime.toFixed(2));
@@ -132,14 +133,32 @@ export default class TimestampPlugin extends Plugin {
 						const seconds = totalSeconds - (hours * 3600) - (minutes * 60);
 						const time = (hours > 0 ? leadingZero(hours) + ":" : "") + leadingZero(minutes) + ":" + leadingZero(seconds);
 
-						let content = ""
+						const content = makeVideoNote({
+							ts: time,
+							url: playItem.displayUrl,
+							title: videoTitle ?? undefined
+						})
 
-						content += [
-							"```video-note",
-							`ts: ${time}`,
-							`url: ${playItem.displayUrl}`,
-							"```"
-						].join('\n') + '\n'
+						// insert timestamp into editor
+						editor.replaceSelection(content)
+					}
+				})
+			}
+		});
+
+		this.addCommand({
+			id: 'video-note-insert',
+			name: 'Insert Video Note from current video',
+			editorCallback: (editor, view) => {
+				const videoLeaf = this.getVideoLeaf()
+				if (!videoLeaf) return;
+
+				VideoPanelGetStamp(videoLeaf, (rawUrl, playItem, videoTitle, playTime)=> {
+					if (playItem) {
+						const content = makeVideoNote({
+							url: playItem.displayUrl,
+							title: videoTitle ?? undefined
+						})
 
 						// insert timestamp into editor
 						editor.replaceSelection(content)

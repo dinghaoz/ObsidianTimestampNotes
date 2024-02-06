@@ -31,7 +31,7 @@ export type ToggleCommand = {
 
 export type GetStampCommand = {
 	commandName: "getStamp",
-	callback: (rawUrl: string|null, playItem: PlayItem|null, playTime: number|null)=>void
+	callback: (rawUrl: string|null, playItem: PlayItem|null, title: string|null, playTime: number|null)=>void
 }
 
 export type VideoActionId = "add-local-media" | "add-subtitles" | "video-snapshot" | "close-video"
@@ -94,6 +94,7 @@ export class VideoView extends ItemView {
 
 		menu.addItem(item => item
 				.setTitle("Open Local File...")
+				.setIcon("folder-open")
 				.onClick(()=>this.chooseLocalFile())
 		);
 
@@ -102,22 +103,26 @@ export class VideoView extends ItemView {
 			if (this.player) {
 				menu.addItem(item => item
 					.setTitle("Add Subtitles...")
+					.setIcon("message-square")
 					.onClick(()=>this.chooseSubtitles())
 				);
 			}
 
 			menu.addItem(item => item
 				.setTitle("Insert to Note")
+				.setIcon("youtube")
 				.onClick(() => this.insertToNote(false))
 			)
 
 			menu.addItem(item => item
-				.setTitle("Insert to Note with Time")
+				.setTitle("Insert to Note with Timestamp")
+				.setIcon("clock")
 				.onClick(() => this.insertToNote(false))
 			)
 
 			menu.addItem(item => item
 				.setTitle("Capture Snapshot")
+				.setIcon("camera")
 				.onClick(() => this.captureSnapshot())
 			)
 
@@ -125,6 +130,7 @@ export class VideoView extends ItemView {
 
 			menu.addItem(item => item
 				.setTitle("Close")
+				.setIcon("power")
 				.onClick(()=>this.statesAccessor?.setRawUrl(null))
 			);
 		}
@@ -251,7 +257,11 @@ export class VideoView extends ItemView {
 				this.statesAccessor.setPlaying(value => !value)
 				break
 			case "getStamp":
-				state.callback(this.statesAccessor.getRawUrl(), this.statesAccessor.getPlayItem(), this.player?.getCurrentTime() ?? null)
+				state.callback(
+					this.statesAccessor.getRawUrl(),
+					this.statesAccessor.getPlayItem(),
+					this.statesAccessor.getVideoTitle(),
+					this.player?.getCurrentTime() ?? null)
 				break
 			case "action":
 				switch (state.action) {

@@ -30,6 +30,9 @@ export type VideoPanelStatesAccessor = {
   getPlayItem: ()=>PlayItem|null
   setPlayItem:  React.Dispatch<React.SetStateAction<PlayItem|null>>
 
+  getVideoTitle: ()=>string|null
+  setVideoTitle: React.Dispatch<React.SetStateAction<string|null>>
+
   getPlaying: ()=>boolean
   setPlaying: React.Dispatch<React.SetStateAction<boolean>>
 }
@@ -62,7 +65,8 @@ const Title = styled.div`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  
+  user-select: text;
+  color: var(--color-base-60)
 `
 
 async function getPlayItem(rawUrl: string|null): Promise<PlayItem | null> {
@@ -117,10 +121,13 @@ export function VideoPanel(props: VideoPanelProps) {
       getPlayItem: ()=>playItem,
       setPlayItem: (playItem)=>setPlayItem(playItem),
 
+      getVideoTitle: ()=>videoTitle,
+      setVideoTitle: (videoTitle)=>setVideoTitle(videoTitle),
+
       getPlaying: ()=>playing,
       setPlaying: (playing)=>setPlaying(playing),
     })
-  }, [rawUrl, playItem, playing]);
+  }, [rawUrl, playItem, videoTitle, playing]);
 
   useEffect(() => {
     if (playItem) {
@@ -200,11 +207,11 @@ export function VideoPanel(props: VideoPanelProps) {
 
 
     <HStack style={{gap: 6, marginTop: 10}}>
-      {faviconUrl && <Favicon src={faviconUrl}/> }
-      {!faviconUrl && <div style={{width:16, height:16, color: rawUrl ? "var(--color-base-60)" : "var(--color-base-30)"}}><IconView name={"file-video"}/></div>}
+      {faviconUrl && playItem && <Favicon src={faviconUrl}/> }
+      {!faviconUrl && playItem && <div style={{width:16, height:16, color: rawUrl ? "var(--color-base-60)" : "var(--color-base-30)"}}><IconView name={"file-video"}/></div>}
 
       { videoTitle &&
-        <Title>{videoTitle}</Title>
+        <Title >{videoTitle}</Title>
       }
     </HStack>
 

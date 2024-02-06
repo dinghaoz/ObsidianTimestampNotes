@@ -2,12 +2,9 @@ import React from "react";
 import styled from "styled-components";
 import {getIcon} from "obsidian";
 import {IconView} from "./IconView";
+import {VideoNoteData} from "../VideoNote";
 
-export type VideoButtonData = {
-  url?: string,
-  title?: string,
-  ts?: string
-}
+
 
 const Container = styled.div`
   display: flex;
@@ -37,7 +34,7 @@ const Title = styled.div`
   width: auto;
 `
 
-export function VideoButton(props: {data: VideoButtonData, onClick: ()=>void}) {
+export function VideoButton(props: {data: VideoNoteData, onClick: ()=>void}) {
 
   let title = props.data.title
   if (!title && !props.data.ts) {
