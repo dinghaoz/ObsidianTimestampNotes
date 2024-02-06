@@ -6,8 +6,7 @@ import {IconView} from "./IconView";
 import {cleanUrl, isLocalFile} from "../handlers/misc";
 import {localVideoRedirect} from "../handlers/server";
 import {getBiliInfo, isBiliUrl} from "../handlers/bilibili";
-import {requestUrl} from "obsidian";
-import {getFaviconUrl} from "../utils";
+import {getFaviconUrl, getPageTitle} from "../utils";
 
 
 const Container = styled.div`
@@ -57,6 +56,16 @@ const Favicon = styled.img`
   height: 16px;
 `
 
+const Title = styled.div`
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  
+`
+
 async function getPlayItem(rawUrl: string|null): Promise<PlayItem | null> {
   if (rawUrl === null)
     return null
@@ -98,6 +107,8 @@ export function VideoPanel(props: VideoPanelProps) {
   const [playing, setPlaying] = useState(true)
 
   const [faviconUrl, setFaviconUrl] = useState<string|null>(null)
+  const [videoTitle, setVideoTitle] = useState<string|null>(null)
+
 
   useEffect(() => {
     props.onExportStateAccess({
@@ -116,8 +127,10 @@ export function VideoPanel(props: VideoPanelProps) {
     if (playItem) {
       setFaviconUrl(null)
       getFaviconUrl(playItem.displayUrl).then(url => setFaviconUrl(url)).catch()
+      getPageTitle(playItem.displayUrl).then(title => setVideoTitle(title)).catch()
     } else {
       setFaviconUrl(null)
+      setVideoTitle(null)
     }
   }, [playItem]);
 
@@ -136,7 +149,7 @@ export function VideoPanel(props: VideoPanelProps) {
       <HStack style={{gap: 6}}>
         {faviconUrl && <Favicon src={faviconUrl}/> }
         {!faviconUrl && <div style={{width:16, height:16, color: rawUrl ? "var(--color-base-60)" : "var(--color-base-30)"}}><IconView name={"file-video"}/></div>}
-        <input type={"text"} style={{flexGrow: 1}}  value={editingUrl} onChange={e=>{setEditingUrl(e.currentTarget.value)}} onKeyUp={event => {
+        <input type={"text"} placeholder={"Paste URL and Press Enter to Open"} style={{flexGrow: 1}}  value={editingUrl} onChange={e=>{setEditingUrl(e.currentTarget.value)}} onKeyUp={event => {
           if (event.key === "Enter") {
             event.preventDefault();
             props.onCommitUrl(editingUrl)
@@ -152,7 +165,7 @@ export function VideoPanel(props: VideoPanelProps) {
 
       </HStack>
 
-      {(playItem) &&
+      {playItem &&
         <>
           <div style={{width:'100%', aspectRatio: '16/9', marginTop: 10, borderRadius: 8, overflow: "hidden"}}>
             <ReactPlayer
@@ -186,6 +199,10 @@ export function VideoPanel(props: VideoPanelProps) {
             />
           </div>
         </>
+      }
+
+      { videoTitle &&
+        <Title>{videoTitle}</Title>
       }
 
     </Container>

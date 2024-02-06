@@ -16,3 +16,13 @@ export async function getFaviconUrl(urlStr: string): Promise<string|null> {
   const url = new URL(urlStr)
   return `${url.protocol}//${url.hostname}/favicon.ico`
 }
+
+export async function getPageTitle(urlStr: string): Promise<string|null> {
+  if (isLocalFile(urlStr)) return urlStr.split('/').last() ?? null
+  const response = await requestUrl(urlStr)
+  const html = response.text
+
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  const title = doc.querySelectorAll('title')[0]
+  return title.innerText.replace("- YouTube", "") ?? null
+}

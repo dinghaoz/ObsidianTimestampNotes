@@ -107,9 +107,21 @@ export class VideoView extends ItemView {
 			}
 
 			menu.addItem(item => item
+				.setTitle("Insert to Note")
+				.onClick(() => this.insertToNote(false))
+			)
+
+			menu.addItem(item => item
+				.setTitle("Insert to Note with Time")
+				.onClick(() => this.insertToNote(false))
+			)
+
+			menu.addItem(item => item
 				.setTitle("Capture Snapshot")
 				.onClick(() => this.captureSnapshot())
 			)
+
+			menu.addSeparator()
 
 			menu.addItem(item => item
 				.setTitle("Close")
@@ -118,6 +130,10 @@ export class VideoView extends ItemView {
 		}
 
 		menu.showAtMouseEvent(event.nativeEvent);
+	}
+
+	insertToNote(withTime: boolean) {
+
 	}
 
 	captureSnapshot() {
