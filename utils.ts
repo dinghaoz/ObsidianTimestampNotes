@@ -24,5 +24,9 @@ export async function getPageTitle(urlStr: string): Promise<string|null> {
 
   const doc = new DOMParser().parseFromString(html, 'text/html')
   const title = doc.querySelectorAll('title')[0]
-  return title.innerText.replace("- YouTube", "") ?? null
+  return title.innerText
+      .replace(" - YouTube", "")
+      .replace("_哔哩哔哩_bilibili", "")
+      .replace(" - video Dailymotion", "")
+    ?? null
 }
