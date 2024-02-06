@@ -19,8 +19,10 @@ export function IconView(props: {name: string}) {
     if (e) {
       if (!(e.firstChild instanceof SVGSVGElement)) {
         const icon = getIcon(props.name)
-        icon.style.flexShrink = '0'
-        e.insertBefore(icon, e.firstChild)
+        if (icon) {
+          icon.style.flexShrink = '0'
+          e.insertBefore(icon, e.firstChild)
+        }
       }
     }
   }

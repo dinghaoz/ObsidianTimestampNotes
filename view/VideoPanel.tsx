@@ -135,6 +135,7 @@ export function VideoPanel(props: VideoPanelProps) {
   return (<Container>
       <HStack style={{gap: 6}}>
         {faviconUrl && <Favicon src={faviconUrl}/> }
+        {!faviconUrl && <div style={{width:16, height:16, color: rawUrl ? "var(--color-base-60)" : "var(--color-base-30)"}}><IconView name={"file-video"}/></div>}
         <input type={"text"} style={{flexGrow: 1}}  value={editingUrl} onChange={e=>{setEditingUrl(e.currentTarget.value)}} onKeyUp={event => {
           if (event.key === "Enter") {
             event.preventDefault();
