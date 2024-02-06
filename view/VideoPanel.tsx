@@ -14,23 +14,6 @@ const Container = styled.div`
 	flex-direction: column;
 `
 
-const Button = styled.div`
-	border: 1px solid lightgray;
-	border-radius: 8px;
-	padding: 0 10px;
-	height: 38px;
-
-  box-sizing: border-box;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  font-size: 12px;
-  font-weight: 600;
-  text-align: center;
-`
-
 
 export type PlayItem = {
   playingUrl: string
