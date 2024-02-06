@@ -57,7 +57,6 @@ const Favicon = styled.img`
 `
 
 const Title = styled.div`
-  margin-top: 10px;
   font-size: 13px;
   font-weight: 400;
   white-space: nowrap;
@@ -147,8 +146,6 @@ export function VideoPanel(props: VideoPanelProps) {
 
   return (<Container>
       <HStack style={{gap: 6}}>
-        {faviconUrl && <Favicon src={faviconUrl}/> }
-        {!faviconUrl && <div style={{width:16, height:16, color: rawUrl ? "var(--color-base-60)" : "var(--color-base-30)"}}><IconView name={"file-video"}/></div>}
         <input type={"text"} placeholder={"Paste URL and Press Enter to Open"} style={{flexGrow: 1}}  value={editingUrl} onChange={e=>{setEditingUrl(e.currentTarget.value)}} onKeyUp={event => {
           if (event.key === "Enter") {
             event.preventDefault();
@@ -201,9 +198,16 @@ export function VideoPanel(props: VideoPanelProps) {
         </>
       }
 
+
+    <HStack style={{gap: 6, marginTop: 10}}>
+      {faviconUrl && <Favicon src={faviconUrl}/> }
+      {!faviconUrl && <div style={{width:16, height:16, color: rawUrl ? "var(--color-base-60)" : "var(--color-base-30)"}}><IconView name={"file-video"}/></div>}
+
       { videoTitle &&
         <Title>{videoTitle}</Title>
       }
+    </HStack>
+
 
     </Container>
   )
