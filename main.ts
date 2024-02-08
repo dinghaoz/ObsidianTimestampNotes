@@ -97,8 +97,8 @@ export default class TimestampPlugin extends Plugin {
 
 		// Command that gets selected video link and sends it to view which passes it to React component
 		this.addCommand({
-			id: 'trigger-player',
-			name: 'Open video player (copy video url and use hotkey)',
+			id: 'create-video-note',
+			name: 'Turn the selected URL into a video note block',
 			editorCallback: async (editor, view) => {
 				// Get selected text or clipboard content and match against video url to convert link to video id
 				const url = editor.getSelection().trim() || (await navigator.clipboard.readText()).trim();
@@ -225,6 +225,8 @@ export default class TimestampPlugin extends Plugin {
 				}
 			})
 		})
+
+
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new TimestampPluginSettingTab(this.app, this));
