@@ -32,6 +32,15 @@ function getSeconds(ts: string) {
 	return (hh || 0) * 3600 + (mm || 0) * 60 + (ss || 0);
 }
 
+function getDisplayTime(playTime: number) {
+	const leadingZero = (num: number) => num < 10 ? "0" + num.toFixed(0) : num.toFixed(0);
+	const totalSeconds = Number(playTime.toFixed(2));
+	const hours = Math.floor(totalSeconds / 3600);
+	const minutes = Math.floor((totalSeconds - (hours * 3600)) / 60);
+	const seconds = totalSeconds - (hours * 3600) - (minutes * 60);
+	return (hours > 0 ? leadingZero(hours) + ":" : "") + leadingZero(minutes) + ":" + leadingZero(seconds);
+}
+
 export default class TimestampPlugin extends Plugin {
 
 	settings!: TimestampPluginSettings;
@@ -126,15 +135,9 @@ export default class TimestampPlugin extends Plugin {
 
 				VideoPanelGetStamp(videoLeaf, (rawUrl, playItem, videoTitle, playTime)=> {
 					if (playItem && playTime) {
-						const leadingZero = (num: number) => num < 10 ? "0" + num.toFixed(0) : num.toFixed(0);
-						const totalSeconds = Number(playTime.toFixed(2));
-						const hours = Math.floor(totalSeconds / 3600);
-						const minutes = Math.floor((totalSeconds - (hours * 3600)) / 60);
-						const seconds = totalSeconds - (hours * 3600) - (minutes * 60);
-						const time = (hours > 0 ? leadingZero(hours) + ":" : "") + leadingZero(minutes) + ":" + leadingZero(seconds);
-
+						const displayTime = getDisplayTime(playTime)
 						const content = makeVideoNote({
-							ts: time,
+							ts: displayTime,
 							url: playItem.displayUrl,
 							title: videoTitle ?? undefined
 						})
