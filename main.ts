@@ -128,7 +128,7 @@ export default class TimestampPlugin extends Plugin {
 		// This command inserts the timestamp of the playing video into the editor
 		this.addCommand({
 			id: 'video-note-insert-time',
-			name: 'Insert Video Note from current video',
+			name: 'Insert Video Note from current video with timestamp',
 			editorCallback: (editor, view) => {
 				const videoLeaf = this.getVideoLeaf()
 				if (!videoLeaf) return;
