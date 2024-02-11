@@ -109,18 +109,6 @@ export class VideoView extends ItemView {
 			}
 
 			menu.addItem(item => item
-				.setTitle("Insert to Note")
-				.setIcon("youtube")
-				.onClick(() => this.insertToNote(false))
-			)
-
-			menu.addItem(item => item
-				.setTitle("Insert to Note with Timestamp")
-				.setIcon("clock")
-				.onClick(() => this.insertToNote(false))
-			)
-
-			menu.addItem(item => item
 				.setTitle("Capture Snapshot")
 				.setIcon("camera")
 				.onClick(() => this.captureSnapshot())
@@ -136,10 +124,6 @@ export class VideoView extends ItemView {
 		}
 
 		menu.showAtMouseEvent(event.nativeEvent);
-	}
-
-	insertToNote(withTime: boolean) {
-
 	}
 
 	captureSnapshot() {

@@ -20,6 +20,7 @@ import React, {ReactDOM} from "react";
 import {createRoot} from "react-dom/client";
 import {VideoButton} from "./view/VideoButton";
 import {makeVideoNote, VideoNoteData} from "./VideoNote";
+import {getPageTitle} from "./utils";
 
 const ERRORS: { [key: string]: string } = {
 	"INVALID_URL": "\n> [!error] Invalid Video URL\n> The highlighted link is not a valid video url. Please try again with a valid link.\n",
@@ -105,23 +106,18 @@ export default class TimestampPlugin extends Plugin {
 
 				// Activate the view with the valid link
 				if (isLocalFile(url) || ReactPlayer.canPlay(url) || isBiliUrl(url)) {
-					const noteTitle = this.settings.noteTitle
-					let content = ""
-					if (noteTitle) {
-						content += `${noteTitle}\n`
-					}
+					getPageTitle(url).then(t => {
+						const title = (t ?? undefined)
+						const content = makeVideoNote({
+							url: url,
+							title: title
+						})
+						editor.replaceSelection(content)
+					})
 
-					content += [
-						"```video-note",
-						`url: ${url}`,
-						"```"
-					].join('\n') + '\n'
-
-					editor.replaceSelection(content)
 				} else {
-					editor.replaceSelection(ERRORS["INVALID_URL"])
+					new Notice(ERRORS["INVALID_URL"])
 				}
-				editor.setCursor(editor.getCursor().line + 1)
 			}
 		});
 
@@ -172,7 +168,7 @@ export default class TimestampPlugin extends Plugin {
 
 		//Command that play/pauses the video
 		this.addCommand({
-			id: 'pause-player',
+			id: 'toggle-pause-player',
 			name: 'Play/Pause player',
 			callback: () => {
 				const videoLeaf = this.getVideoLeaf()
